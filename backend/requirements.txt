@@ -4,3 +4,4 @@ pytest
 python-dotenv
 requests
 Flask-Caching
+gunicorn 
