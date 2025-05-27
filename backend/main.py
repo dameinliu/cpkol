@@ -4,8 +4,8 @@ from app.models import db
 from app.cli import reset_db
 import os
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///influencers.db'
+app = Flask(__name__, instance_relative_config=True)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///'+ os.path.join(app.instance_path, 'influencers.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 app.register_blueprint(influencer_bp)
