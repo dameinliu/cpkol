@@ -1,6 +1,0 @@
-Flask
-Flask-SQLAlchemy
-pytest
-python-dotenv
-requests
-Flask-Caching

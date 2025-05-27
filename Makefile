@@ -10,7 +10,7 @@ help:
 	@echo "  make frontend          # 安装并启动前端"
 
 install-backend:
-	cd backend && pip install -r ../requirements.txt
+	cd backend && pip install -r requirements.txt
 
 install-frontend:
 	cd frontend && yarn install
