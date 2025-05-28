@@ -13,7 +13,7 @@ try:
     app = Flask(__name__, instance_relative_config=True)
     CORS(app)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-        'DATABASE_URL',
+        "DATABASE_URL",
         'postgresql://postgres:123456@localhost:5432/influencers'                                                   
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
