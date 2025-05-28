@@ -16,6 +16,22 @@ db.init_app(app)
 app.register_blueprint(influencer_bp)
 app.cli.add_command(reset_db)
 
+@app.route('/health')
+def health():
+    return {"status": "ok"}, 200
+
+from sqlalchemy import text
+
+@app.route('/ping-db')
+def ping_db():
+    try:
+        # 执行一条最简单的 SQL 查询
+        db.session.execute(text("SELECT 1"))
+        return {"status": "ok", "message": "Database connection successful"}, 200
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
+
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host="0.0.0.0", port=port)

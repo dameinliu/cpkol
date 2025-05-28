@@ -1,5 +1,4 @@
 .venv/
-# 忽略所有.env文件
 .env*
 
 # 忽略所有__pycache__文件
