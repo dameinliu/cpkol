@@ -60,7 +60,7 @@
     </el-table>
 
     <div v-if="influencer && influencer.videos && influencer.videos.length" style="margin-top: 30px;">
-      <h3>视频列表</h3>
+      <h3>最近30条视频列表</h3>
       <el-table :data="influencer.videos" border>
         <el-table-column label="视频ID" prop="id" />
         <el-table-column label="标题">
@@ -97,6 +97,7 @@ const formRef = ref()
 const influencer = ref(null)
 const loading = ref(false)
 const errorMsg = ref('')
+const API_URL = import.meta.env.VITE_API_URL
 
 async function onSearch() {
   formRef.value.validate(async (valid) => {
@@ -105,7 +106,7 @@ async function onSearch() {
       influencer.value = null
       errorMsg.value = ''
       try {
-        const res = await axios.get('/api/influencers/search', {
+        const res = await axios.get(`${API_URL}/api/influencers/search`, {
           params: { handle: form.value.handle }
         })
         // 兼容后端返回的字段名

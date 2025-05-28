@@ -22,3 +22,7 @@ node_modules/
 .idea/
 
 rapidapi.md
+
+# 忽略所有instance文件
+instance/
+*.db
