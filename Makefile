@@ -10,14 +10,13 @@ help:
 	@echo "  make frontend          # 安装并启动前端"
 
 install-backend:
-	cd backend && pip install -r ../requirements.txt
+	cd backend && pip install -r requirements.txt
 
 install-frontend:
 	cd frontend && yarn install
 
 run-backend:
-	cd backend && python app.py
-
+	cd backend && FLASK_APP=main.py FLASK_ENV=development flask run --debug
 run-frontend:
 	cd frontend && yarn dev
 

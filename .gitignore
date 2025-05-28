@@ -1,5 +1,4 @@
 .venv/
-# 忽略所有.env文件
 .env*
 
 # 忽略所有__pycache__文件
@@ -14,3 +13,15 @@ __pycache__/
 
 # 忽略所有node_modules文件
 node_modules/
+
+# 忽略所有.DS_Store文件
+.DS_Store
+
+# 忽略所有.idea文件
+.idea/
+
+rapidapi.md
+
+# 忽略所有instance文件
+instance/
+*.db
