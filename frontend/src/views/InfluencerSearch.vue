@@ -109,6 +109,7 @@ async function onSearch() {
         const res = await axios.get(`${API_URL}/api/influencers/search`, {
           params: { handle: form.value.handle }
         })
+        console.log(API_URL)
         // 兼容后端返回的字段名
         const data = res.data
         // 处理后端返回的videos字段（字符串或数组）
