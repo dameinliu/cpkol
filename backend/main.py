@@ -3,6 +3,7 @@ load_dotenv()
 
 from flask import Flask
 from app.api.influencers import influencer_bp
+from app.api.videos import videos_bp
 from app.models import db
 from app.cli import  reset_db #重置数据库
 from flask_cors import CORS
@@ -19,6 +20,7 @@ try:
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
     app.register_blueprint(influencer_bp)
+    app.register_blueprint(videos_bp)
     app.cli.add_command(reset_db)
 
     @app.route('/health')

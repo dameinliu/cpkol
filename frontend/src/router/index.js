@@ -1,10 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import Home from '../views/Home.vue'
 import InfluencerSearch from '../views/InfluencerSearch.vue'
-import InfluencerList from '../views/InfluencerList.vue'
+import TrendingVideos from '../views/TrendingVideos.vue'
 
 const routes = [
-  { path: '/', component: InfluencerSearch },
-  { path: '/list', component: InfluencerList }
+  { path: '/', component: Home },
+  { path: '/influencer-search', component: InfluencerSearch },
+  { path: '/trending-videos', component: TrendingVideos }
 ]
 
 const router = createRouter({
