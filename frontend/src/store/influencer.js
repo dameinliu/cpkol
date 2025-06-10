@@ -8,6 +8,10 @@ export const useInfluencerStore = defineStore('influencer', () => {
   const error = ref(null)
   const userInfo = ref(null)
   const videoStats = ref(null)
+  const total = ref(0)
+  const page = ref(1)
+  const perPage = ref(10)
+  const pages = ref(1)
 
   async function searchInfluencers({ keyword }) {
     loading.value = true
@@ -39,10 +43,34 @@ export const useInfluencerStore = defineStore('influencer', () => {
       }
     }
     
+  async function fetchInfluencers({ page: p = 1, perPage: pp = 10 } = {}) {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await axios.get('/api/influencers', {
+        params: { page: p, per_page: pp }
+      })
+      influencers.value = res.data.items
+      total.value = res.data.total
+      page.value = res.data.page
+      perPage.value = res.data.per_page
+      pages.value = res.data.pages
+    } catch (e) {
+      error.value = e.message
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     influencers,
     loading,
     error,
+    total,
+    page,
+    perPage,
+    pages,
+    fetchInfluencers,
     searchInfluencers
   }
-  })
+})

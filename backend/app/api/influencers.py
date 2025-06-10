@@ -73,3 +73,20 @@ def search_influencers():
         return jsonify({"error": f"TikAPI响应异常: {str(e)}"}), 502
     except Exception as e:
         return jsonify({"error": f"API响应解析失败: {str(e)}"}), 500
+
+@influencer_bp.route('/api/influencers', methods=['GET'])
+def list_influencers():
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+        pagination = Influencer.query.order_by(Influencer.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        items = [i.to_dict() for i in pagination.items]
+        return jsonify({
+            'items': items,
+            'total': pagination.total,
+            'page': pagination.page,
+            'per_page': pagination.per_page,
+            'pages': pagination.pages
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
