@@ -17,6 +17,8 @@ class Influencer(db.Model):
     total_digg_count = db.Column(db.Integer, default=0)
     # 存储视频列表，使用JSON字符串
     videos = db.Column(db.Text, default='[]')
+    updated_date = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(), nullable=True, default=db.func.now())
+    content_type = db.Column(db.String(64), nullable=True, default='normal')
 
     def to_dict(self):
         return {
