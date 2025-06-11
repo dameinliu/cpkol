@@ -1,7 +1,7 @@
 <template>
   <div class="influencer-search" v-loading="loading" element-loading-text="加载中..." element-loading-spinner="el-icon-loading">
     <h1 class="title">网红搜索</h1>
-    <el-card class="form-card">
+    <div class="form-card">
       <el-form
         :inline="true"
         :model="form"
@@ -24,7 +24,7 @@
           </el-button>
         </el-form-item>
       </el-form>
-    </el-card>
+    </div>
 
     <el-alert
       v-if="errorMsg"
@@ -34,7 +34,7 @@
       class="error-alert"
     />
 
-    <el-card v-if="influencer" class="result-card">
+    <div v-if="influencer" class="result-card">
       <h2 class="result-title">网红信息</h2>
       <el-table :data="[influencer]" style="width: 100%" border>
         <el-table-column prop="handle" label="用户名" />
@@ -64,11 +64,11 @@
           </template>
         </el-table-column>
       </el-table>
-    </el-card>
+    </div>
 
     <div v-if="influencer && influencer.videos && influencer.videos.length" class="videos-section">
       <h3 class="videos-title">最近30条视频列表</h3>
-      <el-card class="videos-card">
+      <div class="videos-card">
         <el-table :data="influencer.videos" border>
           <el-table-column label="视频ID" prop="id" />
           <el-table-column label="标题">
@@ -86,7 +86,7 @@
             </template>
           </el-table-column>
         </el-table>
-      </el-card>
+      </div>
     </div>
   </div>
 </template>
@@ -182,72 +182,3 @@ function copyRow(row) {
   })
 }
 </script>
-
-<style scoped>
-.influencer-search {
-  padding: 20px;
-}
-
-.title {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.form-card {
-  margin-bottom: 20px;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-}
-
-.form {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-}
-
-.input {
-  width: 300px;
-}
-
-.search-button {
-  background-color: #409eff;
-  color: white;
-}
-
-.error-alert {
-  margin-top: 20px;
-}
-
-.result-card {
-  margin-top: 20px;
-  padding: 20px;
-  background-color: #fff;
-  border-radius: 8px;
-}
-
-.result-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.videos-section {
-  margin-top: 30px;
-}
-
-.videos-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
-
-.videos-card {
-  padding: 20px;
-  background-color: #fff;
-  border-radius: 8px;
-}
-</style>

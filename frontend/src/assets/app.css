@@ -1,0 +1,289 @@
+/* app.css - 全局样式，参考 AIRR Labs 官网风格 */
+body {
+  font-family: 'Inter', Arial, sans-serif;
+  background: #fff;
+  color: #222;
+  margin: 0;
+  padding: 0;
+}
+
+.navbar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+  box-shadow: 0 2px 8px #f0f1f2;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar .logo {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #27ae60;
+  margin-right: 48px;
+  letter-spacing: 2px;
+}
+
+.navbar .nav-links {
+  display: flex;
+  gap: 32px;
+}
+
+.navbar .nav-link {
+  color: #222;
+  text-decoration: none;
+  font-size: 1.08rem;
+  font-weight: 500;
+  transition: color 0.2s;
+  padding: 8px 0;
+  border-bottom: 2px solid transparent;
+}
+
+.navbar .nav-link.active,
+.navbar .nav-link:hover {
+  color: #27ae60;
+  border-bottom: 2px solid #27ae60;
+}
+
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px 0 24px;
+}
+
+.hero {
+  text-align: center;
+  padding: 80px 0 40px 0;
+  background: #f7fff7;
+}
+
+.hero-title {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #27ae60;
+  margin-bottom: 16px;
+  letter-spacing: 2px;
+}
+
+.hero-sub {
+  font-size: 1.5rem;
+  color: #222;
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 2rem;
+  color: #27ae60;
+  margin: 48px 0 24px 0;
+  text-align: center;
+  font-weight: bold;
+}
+
+.solutions,
+.values,
+.contact {
+  margin-bottom: 48px;
+}
+
+.solutions-list,
+.values-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 32px;
+}
+
+.solution-card,
+.value-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(39,174,96,0.07);
+  padding: 2rem 1.5rem;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.icon-circle,
+.value-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #27ae60;
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+footer {
+  text-align: center;
+  padding: 2rem 0;
+  background: #111;
+  color: #b2ffb2;
+  margin-top: 0;
+  letter-spacing: 1px;
+}
+
+/* 导航栏整体布局 */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 48px;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+.logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #27ae60;
+  letter-spacing: 2px;
+  margin-right: 40px;
+}
+.nav-menu {
+  flex: 1;
+  margin: 0 32px;
+}
+.nav-actions {
+  margin-left: 40px;
+}
+
+/* 统一 InfluencerSearch 和 TrendingVideos 风格 */
+.influencer-search,
+.trending-videos {
+  padding: 32px 0;
+}
+.title {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 24px;
+  text-align: center;
+  color: #27ae60;
+}
+.form-card {
+  margin-bottom: 24px;
+  padding: 0 0 24px 0;
+  background: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-bottom: 1px solid #eee;
+}
+.form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+.input, .country-select {
+  width: 260px;
+}
+.search-button {
+  background-color: #27ae60 !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.search-button:hover, .search-button:focus {
+  background-color: #219150 !important;
+  color: #fff !important;
+}
+.error-alert {
+  margin-top: 20px;
+}
+.result-card, .videos-card {
+  margin-top: 24px;
+  padding: 0 0 24px 0;
+  background: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-bottom: 1px solid #eee;
+}
+.result-title, .videos-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 12px;
+  color: #222;
+}
+.videos-section {
+  margin-top: 32px;
+}
+
+/* TrendingVideos.vue 极简风格 */
+.trending-videos {
+  padding: 32px 0;
+  background: none;
+}
+.trending-videos .form-card,
+.trending-videos .videos-card {
+  background: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  margin-bottom: 24px;
+  padding: 0;
+}
+.trending-videos .form {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 0 0 16px 0;
+  background: none;
+}
+.trending-videos .country-select {
+  width: 220px;
+}
+.trending-videos .el-table {
+  background: none;
+  margin-top: 12px;
+}
+.trending-videos .el-table th, .trending-videos .el-table td {
+  background: none !important;
+}
+.trending-videos .error-alert {
+  margin-top: 20px;
+}
+
+/* 登录弹窗、用户名、退出按钮全局样式 */
+.user-name {
+  color: var(--main-green);
+  font-weight: 600;
+  margin-right: 12px;
+  font-size: 1rem;
+}
+.logout-link {
+  color: #e74c3c;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 12px;
+  transition: color 0.2s;
+}
+.logout-link:hover {
+  color: #b93222;
+  text-decoration: underline;
+}
+.el-dialog__header {
+  font-weight: bold;
+  color: #27ae60;
+  letter-spacing: 1px;
+}
+.el-dialog__footer {
+  text-align: right;
+}
+.el-dialog__body {
+  padding-top: 12px;
+}

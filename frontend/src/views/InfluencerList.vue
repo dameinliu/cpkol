@@ -9,7 +9,13 @@
     <el-table-column prop="total_comment_count" label="总评论数" />
     <el-table-column prop="total_digg_count" label="总点赞数" />
     <el-table-column prop="content_type" label="内容类型" />
-    <el-table-column prop="updated_date" label="更新时间" />
+    <el-table-column prop="updated_date" label="更新时间">
+      <template #default="scope">
+        <span>
+          {{ scope.row.updated_date ? new Date(scope.row.updated_date).toLocaleString() : '' }}
+        </span>
+      </template>
+    </el-table-column>
   </el-table>
   <el-pagination
     v-if="store.pages > 1"

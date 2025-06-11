@@ -1,28 +1,5 @@
 <template>
   <div class="home">
-    <header class="navbar">
-      <div class="logo">CYPRESS MEDIA</div>
-      <nav>
-        <router-link to="/" exact>Home</router-link>
-        <a href="#solutions">Solutions</a>
-        <a href="#values">Values</a>
-        <a href="#contact">Contact</a>
-        <template v-if="isLogin">
-          <router-link to="/influencer-search">网红搜索</router-link>
-          <router-link to="/trending-videos">热门视频</router-link>
-        </template>
-      </nav>
-      <div class="login-area">
-        <template v-if="!isLogin">
-          <button class="login-btn" @click="showLogin = true">Login</button>
-        </template>
-        <template v-else>
-          <span class="user">{{ username }}</span>
-          <button class="logout-btn" @click="logout">Logout</button>
-        </template>
-      </div>
-    </header>
-
     <!-- 登录弹窗 -->
     <div v-if="showLogin" class="login-modal">
       <div class="login-dialog">

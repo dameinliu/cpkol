@@ -15,7 +15,7 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="fetchVideos">获取视频</el-button>
+          <el-button class="search-button" @click="fetchVideos">获取视频</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -67,44 +67,3 @@ async function fetchVideos() {
   }
 }
 </script>
-
-<style scoped>
-.trending-videos {
-  padding: 20px;
-}
-
-.title {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.form-card {
-  margin-bottom: 20px;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-}
-
-.form {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-}
-
-.country-select {
-  width: 200px;
-}
-
-.error-alert {
-  margin-top: 20px;
-}
-
-.videos-card {
-  padding: 20px;
-  background-color: #fff;
-  border-radius: 8px;
-}
-</style>

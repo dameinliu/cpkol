@@ -29,7 +29,9 @@ class Influencer(db.Model):
             'total_play_count': self.total_play_count,
             'total_comment_count': self.total_comment_count,
             'total_digg_count': self.total_digg_count,
-            'videos': json.loads(self.videos) if self.videos else []
+            'videos': json.loads(self.videos) if self.videos else [],
+            'updated_date': self.updated_date.isoformat() if self.updated_date else None,
+            'content_type': self.content_type
         }
 
     def __repr__(self):

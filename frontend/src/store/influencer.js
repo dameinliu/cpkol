@@ -10,7 +10,7 @@ export const useInfluencerStore = defineStore('influencer', () => {
   const videoStats = ref(null)
   const total = ref(0)
   const page = ref(1)
-  const perPage = ref(10)
+  const perPage = ref(12)
   const pages = ref(1)
 
   async function searchInfluencers({ keyword }) {
