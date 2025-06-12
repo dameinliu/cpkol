@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   plugins: [vue()],
@@ -9,6 +10,18 @@ export default defineConfig({
         target: 'http://127.0.0.1:5000',
         changeOrigin: true
       }
+    }
+  },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // additionalData: `@import "@/assets/element-variables.scss";`
+      }
+    }
+  },
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   }
 })

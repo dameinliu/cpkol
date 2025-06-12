@@ -4,6 +4,8 @@ load_dotenv()
 from flask import Flask
 from app.api.influencers import influencer_bp
 from app.api.videos import videos_bp
+from app.api.feishu import feishu_bp
+from app.api.feishu_oauth import feishu_oauth_bp
 from app.models import db
 from app.cli import  reset_db #重置数据库
 from flask_cors import CORS
@@ -21,6 +23,8 @@ try:
     db.init_app(app)
     app.register_blueprint(influencer_bp)
     app.register_blueprint(videos_bp)
+    app.register_blueprint(feishu_bp)
+    app.register_blueprint(feishu_oauth_bp)
     app.cli.add_command(reset_db)
 
     @app.route('/health')
