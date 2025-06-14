@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import axios from 'axios'
 
@@ -6,8 +6,8 @@ export const useInfluencerStore = defineStore('influencer', () => {
   const influencers = ref([])
   const loading = ref(false)
   const error = ref(null)
-  const userInfo = ref(null)
-  const videoStats = ref(null)
+  // const userInfo = ref(null)
+  // const videoStats = ref(null)
   const total = ref(0)
   const page = ref(1)
   const perPage = ref(12)
