@@ -12,10 +12,10 @@
           active-text-color="#27ae60"
           style="flex: 1; margin-left: 40px;"
         >
-          <el-menu-item index="/">首页</el-menu-item>
-          <el-menu-item index="/influencer-list">网红列表</el-menu-item>
-          <el-menu-item index="/influencer-search">网红搜索</el-menu-item>
-          <el-menu-item index="/trending-videos">热门视频</el-menu-item>
+          <el-menu-item index="/" @click="handleSelect('/InfluencerList')">首页</el-menu-item>
+          <el-menu-item index="/InfluencerList" @click="handleSelect('/InfluencerList')">网红列表</el-menu-item>
+          <el-menu-item index="/InfluencerSearch" @click="handleSelect('/InfluencerSearch')">网红搜索</el-menu-item>
+          <el-menu-item index="/TrendingVideos" @click="handleSelect('/TrendingVideos')">热门视频</el-menu-item>
         </el-menu>
         <div class="nav-actions" style="margin-left: auto; margin-right: 100px; display: flex; align-items: center;">
           <template v-if="!isLogin">
@@ -47,6 +47,11 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import LoginDialog from '@/components/LoginDialog.vue'
+import { useRouter, useRoute } from 'vue-router'
+
+const router = useRouter()
+const route = useRoute()
+const activeIndex = ref(route.path)
 
 const showLogin = ref(false)
 const isLogin = ref(false)
@@ -63,6 +68,10 @@ function logout() {
   isLogin.value = false
   username.value = ''
   ElMessage.success('已退出登录')
+}
+
+const handleSelect = (index) => {
+  router.push(index)
 }
 </script>
 
@@ -117,5 +126,23 @@ body {
 .logout-link:hover {
   color: #b93222;
   text-decoration: underline;
+}
+.el-aside {
+  background-color: #f5f7fa;
+  height: 100vh;
+}
+
+.el-menu {
+  border-right: none;
+}
+
+.router-link-active {
+  color: inherit;
+  text-decoration: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
 </style>
