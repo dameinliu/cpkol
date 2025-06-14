@@ -35,13 +35,10 @@
       </div>
     </div>
   </el-header>
+  <LoginDialog v-model:visible="showLogin" @login-success="onLoginSuccess" />
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-
 const router = useRouter()
 const showLogin = ref(false)
 const isLogin = ref(false)
@@ -49,6 +46,13 @@ const username = ref('')
 
 const handleSelect = (path: string) => {
   router.push(path)
+}
+
+const onLoginSuccess = (name: string) => {
+  isLogin.value = true
+  username.value = name
+  showLogin.value = false
+  ElMessage.success('登录成功')
 }
 
 const logout = () => {
