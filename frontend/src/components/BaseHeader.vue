@@ -1,7 +1,6 @@
 <template>
   <el-header>
     <div class="flex items-center justify-between w-full">
-      <div class="ml-10 text-2xl font-bold">CYPRESS MEDIA</div>
       <el-menu
         :default-active="$route.path"
         mode="horizontal"
@@ -11,6 +10,7 @@
         active-text-color="#27ae60"
         class="flex-1 ml-10"
       >
+        <el-menu-item class="text-2xl font-bold">CYPRESS MEDIA</el-menu-item>
         <el-menu-item index="/" @click="handleSelect('/InfluencerList')">首页</el-menu-item>
         <el-menu-item index="/InfluencerList" @click="handleSelect('/InfluencerList')">网红列表</el-menu-item>
         <el-menu-item index="/InfluencerSearch" @click="handleSelect('/InfluencerSearch')">网红搜索</el-menu-item>

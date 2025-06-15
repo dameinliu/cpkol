@@ -1,5 +1,5 @@
 <template>
-  <el-container direction="vertical" class="w-full">
+  <el-container direction="vertical" class="w-full 0">
     <BaseHeader />
     <el-main class="mx-10 ml-10">
       <router-view />

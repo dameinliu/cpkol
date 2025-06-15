@@ -13,7 +13,7 @@
         <el-form-item label="用户名" prop="handle">
           <el-input
             v-model="form.handle"
-            placeholder="请输入TikTok用户名"
+            placeholder="请输入TikTok用户名，多个用英文逗号隔开"
             clearable
             class="input"
           ></el-input>
@@ -34,9 +34,12 @@
       class="error-alert"
     />
 
-    <div v-if="influencer" class="result-card">
+    <div v-if="influencers.length" class="result-card">
+      <div class="flex justify-end mb-4">
+        <el-button type="primary" @click="copyAll" class="btn">一键复制所有行</el-button>
+      </div>
       <h2 class="result-title">网红信息</h2>
-      <el-table :data="[influencer]" style="width: 100%" border>
+      <el-table :data="influencers" style="width: 100%" border>
         <el-table-column prop="handle" label="用户名" />
         <el-table-column prop="follower_count" label="粉丝数" />
         <el-table-column prop="video_count" label="视频数" />
@@ -88,6 +91,15 @@
         </el-table>
       </div>
     </div>
+
+    <el-alert
+      v-for="err in errorList"
+      :key="err.handle"
+      :title="`${err.handle}: ${err.error}`"
+      type="error"
+      show-icon
+      class="error-alert"
+    />
   </div>
 </template>
 
@@ -103,43 +115,45 @@ const rules = {
   ]
 }
 const formRef = ref()
-const influencer = ref(null)
+const influencers = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
 const API_URL = import.meta.env.VITE_API_URL
+const errorList = ref([])
 
 async function onSearch() {
   formRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true
-      influencer.value = null
+      influencers.value = []
       errorMsg.value = ''
+      errorList.value = []
       try {
+        // 处理输入，支持多个 handle
+        const handles = form.value.handle
+          .split(',')
+          .map(h => h.trim())
+          .filter(h => h)
+        if (!handles.length) {
+          errorMsg.value = '请输入至少一个用户名'
+          loading.value = false
+          return
+        }
         const res = await axios.get(`${API_URL}/api/influencers/search`, {
-          params: { handle: form.value.handle }
+          params: { handles: handles.join(',') }
         })
         const data = res.data
-        let videos = []
-        if (typeof data.videos === 'string') {
-          try {
-            videos = JSON.parse(data.videos)
-          } catch {
-            videos = []
-          }
-        } else if (Array.isArray(data.videos)) {
-          videos = data.videos
+        if (data.results) {
+          influencers.value = data.results
+        } else {
+          influencers.value = []
         }
-        influencer.value = {
-          ...data,
-          videos
+        if (data.errors && data.errors.length) {
+          errorList.value = data.errors
         }
       } catch (e) {
-        if (e.response && e.response.data && e.response.data.error) {
-          errorMsg.value = e.response.data.error
-        } else {
-          errorMsg.value = '查询失败，请重试'
-        }
-        influencer.value = null
+        errorMsg.value = '查询失败，请重试'
+        influencers.value = []
       } finally {
         loading.value = false
       }
@@ -165,6 +179,7 @@ function formatTime(ts) {
 
 function copyRow(row) {
   const fields = [
+    { label: '用户名', value: row.handle },
     { label: '粉丝数', value: row.follower_count },
     { label: '视频数', value: row.video_count },
     { label: '总播放量', value: row.total_play_count },
@@ -177,6 +192,31 @@ function copyRow(row) {
   const text = fields.map(f => f.value).join('\t')
   navigator.clipboard.writeText(text).then(() => {
     ElMessage.success('已复制表格内容！')
+  }).catch(() => {
+    ElMessage.error('复制失败')
+  })
+}
+
+function copyAll() {
+  if (!influencers.value.length) {
+    ElMessage.warning('没有可复制的数据')
+    return
+  }
+  // 不需要header，直接拼接数据
+  const rows = influencers.value.map(row => [
+    row.handle,
+    row.follower_count,
+    row.video_count,
+    row.total_play_count,
+    row.total_digg_count,
+    row.total_comment_count,
+    avg(row.total_play_count, row.video_count),
+    percent(row.total_comment_count + row.total_digg_count, row.total_play_count),
+    percent(row.total_comment_count, row.total_digg_count)
+  ].join('\t'))
+  const text = rows.join('\n')
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success('已复制所有行！')
   }).catch(() => {
     ElMessage.error('复制失败')
   })

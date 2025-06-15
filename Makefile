@@ -13,12 +13,12 @@ install-backend:
 	cd backend && pip install -r requirements.txt
 
 install-frontend:
-	cd frontend && yarn install
+	cd frontend && pnpm install
 
 run-backend:
 	cd backend && FLASK_APP=main.py FLASK_ENV=development flask run --debug
 run-frontend:
-	cd frontend && yarn dev
+	cd frontend && pnpm dev
 
 backend: install-backend run-backend
 
