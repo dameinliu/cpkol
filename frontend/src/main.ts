@@ -5,6 +5,7 @@ import { createPinia } from 'pinia'
 import { createRouter, createWebHistory } from 'vue-router'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import 'element-plus/theme-chalk/dark/css-vars.css'
 
 // 导入页面组件
 const pages = import.meta.glob<{ default: any }>('./pages/**/*.vue', { eager: true })
@@ -25,7 +26,8 @@ const router = createRouter({
     routes
 })
 
-app.use(createPinia())
+const pinia = createPinia()
+app.use(pinia)
 app.use(router)
 app.use(ElementPlus)
 app.mount('#app')

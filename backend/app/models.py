@@ -36,3 +36,15 @@ class Influencer(db.Model):
 
     def __repr__(self):
         return f'<Influencer {self.handle}>'
+
+class Video(db.Model):
+    __tablename__ = 'videos'
+    id = db.Column(db.String, primary_key=True)  # TikTok 视频ID
+    desc = db.Column(db.String)
+    author_id = db.Column(db.String)
+    country = db.Column(db.String)
+    play_count = db.Column(db.Integer)
+    digg_count = db.Column(db.Integer)
+    comment_count = db.Column(db.Integer)
+    share_count = db.Column(db.Integer)
+    create_time = db.Column(db.BigInteger)

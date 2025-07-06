@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from tikapi import ValidationException, ResponseException
 from app.utils.tikapi_client import api  # 引入独立的 TikAPI 客户端
 import os
+from app.models import Video, db
 
 videos_bp = Blueprint('videos', __name__)
 
@@ -27,7 +28,23 @@ def get_videos_by_country():
         # 解析响应数据
         data = response.json()
         videos = data.get('itemList', [])
-        return jsonify(videos)  # 返回前30条视频
+        for video in videos:
+            video_id = video.get('id')
+            if not Video.query.filter_by(id=video_id).first():
+                db.session.add(Video(
+                    id=video_id,
+                    desc=video.get('desc'),
+                    author_id=video.get('authorId'),
+                    country=country_code,
+                    play_count=video.get('stats', {}).get('playCount', 0),
+                    digg_count=video.get('stats', {}).get('diggCount', 0),
+                    comment_count=video.get('stats', {}).get('commentCount', 0),
+                    share_count=video.get('stats', {}).get('shareCount', 0),
+                    create_time=video.get('createTime')
+                ))
+        db.session.commit()
+        videos = Video.query.order_by(Video.create_time.desc()).limit(30).all()
+        return jsonify([video.to_dict() for video in videos])
     except ValidationException as e:
         print(f"参数校验失败: {str(e)}")
         return jsonify({"error": f"参数校验失败: {str(e)}"}), 400

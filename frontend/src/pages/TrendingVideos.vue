@@ -1,36 +1,32 @@
 <!-- filepath: /Users/damien/Documents/Coding/full_stack/cpkol/frontend/src/views/TrendingVideos.vue -->
 <template>
-  <div class="trending-videos" v-loading="loading" element-loading-text="加载中..." element-loading-spinner="el-icon-loading">
-    <h1 class="title">热门视频</h1>
-    <el-card class="form-card">
-      <el-form :inline="true" class="form">
-        <el-form-item label="选择国家">
-          <el-select v-model="country" placeholder="请选择国家" class="country-select">
-            <el-option label="美国" value="us"></el-option>
-            <el-option label="泰国" value="th"></el-option>
-            <el-option label="越南" value="vn"></el-option>
-            <el-option label="马来西亚" value="my"></el-option>
-            <el-option label="印度尼西亚" value="id"></el-option>
-            <el-option label="菲律宾" value="ph"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button class="search-button" @click="fetchVideos">获取视频</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+  <div v-loading="loading" element-loading-text="加载中..." element-loading-spinner="el-icon-loading">
+    <el-form :model="form" :inline="true" class="flex justify-center items-center">
+      <el-form-item label="Trending Videos" class="min-w-[300px]">
+        <el-select v-model="form.country" placeholder="Please select a country">
+          <el-option label="America" value="us"></el-option>
+          <el-option label="Thailand" value="th"></el-option>
+          <el-option label="Vietnam" value="vn"></el-option>
+          <el-option label="Malaysia" value="my"></el-option>
+          <el-option label="Indonesia" value="id"></el-option>
+          <el-option label="Philippines" value="ph"></el-option>
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="fetchVideos">Get Videos</el-button>
+      </el-form-item>
+    </el-form>
 
     <el-alert
       v-if="errorMsg"
       :title="errorMsg"
       type="error"
       show-icon
-      class="error-alert"
     />
-    <el-card v-else class="videos-card">
-      <el-table :data="videos" style="width: 100%" border>
+    <el-card v-else>
+      <el-table :data="videos" stripe border class="max-h-2xl">
         <el-table-column label="视频ID" prop="id" />
-        <el-table-column label="标题" prop="desc" />
+        <el-table-column label="标题" show-overflow-tooltip prop="desc" />
         <el-table-column label="播放量" prop="stats.playCount" />
         <el-table-column label="点赞数" prop="stats.diggCount" />
         <el-table-column label="评论数" prop="stats.commentCount" />
@@ -43,8 +39,11 @@
 <script setup>
 import { ref } from 'vue'
 import axios from 'axios'
+import { Location } from '@element-plus/icons-vue'
 
-const country = ref('th') // 默认选择泰国
+const form = ref({
+  country: 'th'
+})
 const videos = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
@@ -56,7 +55,7 @@ async function fetchVideos() {
   videos.value = []
   try {
     const res = await axios.get(`${API_URL}/api/videos`, {
-      params: { country: country.value }
+      params: { country: form.value.country }
     })
     videos.value = res.data
     console.log('获取到的视频数据:', videos.value)

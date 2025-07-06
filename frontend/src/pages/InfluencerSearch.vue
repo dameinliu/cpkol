@@ -1,106 +1,107 @@
 <template>
-  <div class="influencer-search" v-loading="loading" element-loading-text="加载中..." element-loading-spinner="el-icon-loading">
-    <h1 class="title">网红搜索</h1>
-    <div class="form-card">
-      <el-form
-        :inline="true"
-        :model="form"
-        :rules="rules"
-        ref="formRef"
-        @submit.prevent="onSearch"
-        class="form"
-      >
-        <el-form-item label="用户名" prop="handle">
-          <el-input
-            v-model="form.handle"
-            placeholder="请输入TikTok用户名，多个用英文逗号隔开"
-            clearable
-            class="input"
-          ></el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="onSearch" class="search-button">
-            查询
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </div>
-
-    <el-alert
-      v-if="errorMsg"
-      :title="errorMsg"
-      type="error"
-      show-icon
-      class="error-alert"
-    />
-
-    <div v-if="influencers.length" class="result-card">
-      <div class="flex justify-end mb-4">
-        <el-button type="primary" @click="copyAll" class="btn">一键复制所有行</el-button>
+  <el-main>
+    <div v-loading="loading" element-loading-text="加载中..." element-loading-spinner="el-icon-loading">
+      <div>
+        <el-form
+          :inline="true"
+          :model="form"
+          :rules="rules"
+          ref="formRef"
+          @submit.prevent="onSearch"
+          class="p-4 flex justify-center items-center"
+        >
+          <el-form-item prop="handle" class="w-1/2">
+            <el-input
+              v-model="form.handle"
+              placeholder="请输入TikTok用户名，多个用英文逗号隔开"
+              clearable
+              class="h-12"
+            >
+              <template #prepend>@Handle</template>
+              <template #append>
+                <el-button type="primary" @click="onSearch">
+                  Search
+                </el-button>
+              </template>
+            </el-input>
+          </el-form-item>
+        </el-form>
       </div>
-      <h2 class="result-title">网红信息</h2>
-      <el-table :data="influencers" style="width: 100%" border>
-        <el-table-column prop="handle" label="用户名" />
-        <el-table-column prop="follower_count" label="粉丝数" />
-        <el-table-column prop="video_count" label="视频数" />
-        <el-table-column prop="total_play_count" label="总播放量" />
-        <el-table-column prop="total_digg_count" label="总点赞数" />
-        <el-table-column prop="total_comment_count" label="总评论数" />
-        <el-table-column label="平均播放量">
-          <template #default="scope">
-            {{ avg(scope.row.total_play_count, scope.row.video_count) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="互动率">
-          <template #default="scope">
-            {{ percent(scope.row.total_comment_count + scope.row.total_digg_count, scope.row.total_play_count) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="评赞比">
-          <template #default="scope">
-            {{ percent(scope.row.total_comment_count, scope.row.total_digg_count) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="80">
-          <template #default="scope">
-            <el-button size="small" @click="copyRow(scope.row)">复制</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
 
-    <div v-if="influencer && influencer.videos && influencer.videos.length" class="videos-section">
-      <h3 class="videos-title">最近30条视频列表</h3>
-      <div class="videos-card">
-        <el-table :data="influencer.videos" border>
-          <el-table-column label="视频ID" prop="id" />
-          <el-table-column label="标题">
+      <el-alert
+        v-if="errorMsg"
+        :title="errorMsg"
+        type="error"
+        show-icon
+      />
+
+      <div v-if="influencers.length" class="result-card">
+        <div class="flex justify-end mb-4">
+          <el-button type="primary" @click="copyAll" class="btn">一键复制所有行</el-button>
+        </div>
+        <el-table :data="influencers" style="width: 100%" border>
+          <el-table-column prop="handle" label="用户名" />
+          <el-table-column prop="follower_count" label="粉丝数" />
+          <el-table-column prop="video_count" label="视频数" />
+          <el-table-column prop="total_play_count" label="总播放量" />
+          <el-table-column prop="total_digg_count" label="总点赞数" />
+          <el-table-column prop="total_comment_count" label="总评论数" />
+          <el-table-column label="平均播放量">
             <template #default="scope">
-              {{ scope.row.desc || '-' }}
+              {{ avg(scope.row.total_play_count, scope.row.video_count) }}
             </template>
           </el-table-column>
-          <el-table-column label="播放量" prop="stats.playCount" />
-          <el-table-column label="点赞数" prop="stats.diggCount" />
-          <el-table-column label="评论数" prop="stats.commentCount" />
-          <el-table-column label="分享数" prop="stats.shareCount" />
-          <el-table-column label="发布时间">
+          <el-table-column label="互动率">
             <template #default="scope">
-              {{ formatTime(scope.row.createTime) }}
+              {{ percent(scope.row.total_comment_count + scope.row.total_digg_count, scope.row.total_play_count) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="评赞比">
+            <template #default="scope">
+              {{ percent(scope.row.total_comment_count, scope.row.total_digg_count) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="80">
+            <template #default="scope">
+              <el-button size="small" @click="copyRow(scope.row)">复制</el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
-    </div>
 
-    <el-alert
-      v-for="err in errorList"
-      :key="err.handle"
-      :title="`${err.handle}: ${err.error}`"
-      type="error"
-      show-icon
-      class="error-alert"
-    />
-  </div>
+      <div v-if="influencer && influencer.videos && influencer.videos.length" class="videos-section">
+        <h3 class="videos-title">最近30条视频列表</h3>
+        <div class="videos-card">
+          <el-table :data="influencer.videos" border>
+            <el-table-column label="视频ID" prop="id" />
+            <el-table-column label="标题">
+              <template #default="scope">
+                {{ scope.row.desc || '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="播放量" prop="stats.playCount" />
+            <el-table-column label="点赞数" prop="stats.diggCount" />
+            <el-table-column label="评论数" prop="stats.commentCount" />
+            <el-table-column label="分享数" prop="stats.shareCount" />
+            <el-table-column label="发布时间">
+              <template #default="scope">
+                {{ formatTime(scope.row.createTime) }}
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+
+      <el-alert
+        v-for="err in errorList"
+        :key="err.handle"
+        :title="`${err.handle}: ${err.error}`"
+        type="error"
+        show-icon
+        class="error-alert"
+      />
+    </div>
+  </el-main>
 </template>
 
 <script setup>

@@ -1,28 +1,32 @@
 <template>
   <el-header>
-    <div class="flex items-center justify-between w-full">
-      <el-menu
-        :default-active="$route.path"
-        mode="horizontal"
-        router
-        background-color="#fff"
-        text-color="#222"
-        active-text-color="#27ae60"
-        class="flex-1 ml-10"
-      >
-        <el-menu-item class="text-2xl font-bold">CYPRESS MEDIA</el-menu-item>
-        <el-menu-item index="/" @click="handleSelect('/InfluencerList')">首页</el-menu-item>
-        <el-menu-item index="/InfluencerList" @click="handleSelect('/InfluencerList')">网红列表</el-menu-item>
-        <el-menu-item index="/InfluencerSearch" @click="handleSelect('/InfluencerSearch')">网红搜索</el-menu-item>
-        <el-menu-item index="/TrendingVideos" @click="handleSelect('/TrendingVideos')">热门视频</el-menu-item>
-      </el-menu>
-      <div class="ml-auto mr-10 flex items-center">
+    <el-menu
+      :default-active="$route.path"
+      mode="horizontal"
+      :ellipsis="false"
+      router
+    >
+      <el-menu-item class="text-2xl font-bold">CYPRESS MEDIA</el-menu-item>
+      <el-menu-item index="/" @click="handleSelect('/InfluencerList')">首页</el-menu-item>
+      <el-sub-menu index="1">
+        <template #title>Influencer</template>
+        <el-menu-item index="/InfluencerList" @click="handleSelect('/InfluencerList')">Influencer List</el-menu-item>
+        <el-menu-item index="/InfluencerSearch" @click="handleSelect('/InfluencerSearch')">Influencer Search</el-menu-item>
+      </el-sub-menu>
+      <el-sub-menu index="2">
+        <template #title>Videos</template>
+        <el-menu-item index="/TrendingVideos" @click="handleSelect('/TrendingVideos')">Trending Videos</el-menu-item>
+      </el-sub-menu>
+      <el-menu-item>
+        <ThemeSwitch />
+      </el-menu-item>
+      <el-menu-item>
         <template v-if="!isLogin">
-          <el-button type="primary" class="ml-10" @click="showLogin = true">Login</el-button>
+          <el-button type="primary" @click="showLogin = true">Login</el-button>
         </template>
         <template v-else>
           <el-dropdown>
-            <span class="ml-10 cursor-pointer">
+            <span class="cursor-pointer">
               {{ username }}<i class="el-icon-arrow-down el-icon--right"></i>
             </span>
             <template #dropdown>
@@ -32,8 +36,8 @@
             </template>
           </el-dropdown>
         </template>
-      </div>
-    </div>
+      </el-menu-item>
+    </el-menu>
   </el-header>
   <LoginDialog v-model:visible="showLogin" @login-success="onLoginSuccess" />
 </template>
@@ -62,5 +66,8 @@ const logout = () => {
 }
 </script>
 
-<style scoped lang="scss">
+<style scoped>
+.el-menu--horizontal > .el-menu-item:nth-child(1) {
+  margin-right: auto;
+}
 </style> 
