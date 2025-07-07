@@ -1,20 +1,20 @@
-from flask import Blueprint, request, jsonify
+from flask import request, jsonify
 import json
+from datetime import datetime
 from tikapi import ValidationException, ResponseException
+from . import kol_bp
 from app.models import db, Influencer
 from app.utils.tikapi_client import api  # 引入独立的 TikAPI 客户端
 
-influencer_bp = Blueprint('influencer', __name__)
-
-@influencer_bp.route('/api/influencers/search', methods=['GET'])
+@kol_bp.route('/search', methods=['GET'])
 def search_influencers():
-    handles = request.args.get('handles', '').strip()
+    handles = request.args.get('keyword', '').strip()
     if not handles:
-        return jsonify({"error": "handles参数不能为空"}), 400
+        return jsonify({"error": "handle参数不能为空"}), 400
 
     handle_list = [h.strip() for h in handles.split(',') if h.strip()]
     if not handle_list:
-        return jsonify({"error": "请至少输入一个用户名"}), 400
+        return jsonify({"error": "handle参数不能为空"}), 400
 
     results = []
     errors = []
@@ -32,7 +32,7 @@ def search_influencers():
             sec_uid = user_info.get("user", {}).get("secUid", None)
 
             if not user_info or not sec_uid:
-                errors.append({"handle": handle, "error": "未找到该用户"})
+                errors.append({"handle": handle, "error": "Can't find the user"})
                 continue
 
             video_data = api.public.posts(sec_uid).json()
@@ -51,7 +51,8 @@ def search_influencers():
                 total_play_count=total_play_count,
                 total_comment_count=total_comment_count,
                 total_digg_count=total_digg_count,
-                videos=json.dumps(videos)
+                videos=json.dumps(videos),
+                updated_date=datetime.now().isoformat()
             )
             db.session.add(influencer_obj)
             db.session.commit()
@@ -65,7 +66,7 @@ def search_influencers():
 
     return jsonify({"results": results, "errors": errors})
 
-@influencer_bp.route('/api/influencers', methods=['GET'])
+@kol_bp.route('/list', methods=['GET'])
 def list_influencers():
     try:
         page = int(request.args.get('page', 1))
@@ -81,3 +82,16 @@ def list_influencers():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@kol_bp.route('/update', methods=['POST'])
+def update_influencer():
+    data = request.json
+    influencer = Influencer.query.filter_by(handle=data['handle']).first()
+    if influencer:
+        influencer.content_type = ','.join(data['content_type'])
+        influencer.note = data['note']
+        influencer.updated_date = datetime.now().isoformat()
+        db.session.commit()
+        return jsonify({'message': 'Influencer updated successfully'})
+    else:
+        return jsonify({'message': 'Influencer not found'}), 404

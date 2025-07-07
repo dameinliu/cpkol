@@ -1,7 +1,7 @@
 <template>
   <div class="loading-container">
     <el-icon class="is-loading" style="font-size: 32px; margin-right: 8px;"><i class="el-icon-loading"></i></el-icon>
-    <span>加载中，请稍候...</span>
+    <span>Loading...</span>
   </div>
 </template>
 

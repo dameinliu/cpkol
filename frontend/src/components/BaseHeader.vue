@@ -7,7 +7,7 @@
       router
     >
       <el-menu-item class="text-2xl font-bold">CYPRESS MEDIA</el-menu-item>
-      <el-menu-item index="/" @click="handleSelect('/InfluencerList')">首页</el-menu-item>
+      <el-menu-item index="/" @click="handleSelect('/InfluencerList')">Home</el-menu-item>
       <el-sub-menu index="1">
         <template #title>Influencer</template>
         <el-menu-item index="/InfluencerList" @click="handleSelect('/InfluencerList')">Influencer List</el-menu-item>

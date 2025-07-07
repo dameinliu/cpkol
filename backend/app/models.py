@@ -1,6 +1,4 @@
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from .extentions import db
 
 import json
 
@@ -19,6 +17,7 @@ class Influencer(db.Model):
     videos = db.Column(db.Text, default='[]')
     updated_date = db.Column(db.DateTime, server_default=db.func.now(), onupdate=db.func.now(), nullable=True, default=db.func.now())
     content_type = db.Column(db.String(64), nullable=True, default='normal')
+    note = db.Column(db.String(256), nullable=True, default='')
 
     def to_dict(self):
         return {
@@ -48,3 +47,19 @@ class Video(db.Model):
     comment_count = db.Column(db.Integer)
     share_count = db.Column(db.Integer)
     create_time = db.Column(db.BigInteger)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'desc': self.desc,
+            'author_id': self.author_id,
+            'country': self.country,
+            'play_count': self.play_count,
+            'digg_count': self.digg_count,
+            'comment_count': self.comment_count,
+            'share_count': self.share_count,
+            'create_time': self.create_time
+        }
+
+    def __repr__(self):
+        return f'<Video {self.id}>'

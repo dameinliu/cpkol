@@ -1,4 +1,46 @@
 # app模块初始化
 from flask import Flask
-from .models import db
+from flask_cors import CORS
+import os
+from .extentions import db, migrate
+
+def create_app():
+    app = Flask(__name__, instance_relative_config=True)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+        "DATABASE_URL",
+        'postgresql://postgres:123456@localhost:5432/influencers'
+    )
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    CORS(app)
+    db.init_app(app)
+    migrate.init_app(app, db)
+    # 注册蓝图
+    from .api.kol import kol_bp
+    from .api.video import video_bp
+    from .api.feishu.feishu import feishu_bp
+    from .api.feishu.feishu_oauth import feishu_oauth_bp
+    app.register_blueprint(kol_bp)
+    app.register_blueprint(video_bp)
+    app.register_blueprint(feishu_bp)
+    app.register_blueprint(feishu_oauth_bp)
+
+    # 注册自定义 CLI 命令
+    from .cli import reset_db
+    app.cli.add_command(reset_db)
+
+    # 健康检查
+    @app.route('/health')
+    def health():
+        return {"status": "ok"}, 200
+
+    from sqlalchemy import text
+    @app.route('/ping-db')
+    def ping_db():
+        try:
+            db.session.execute(text("SELECT 1"))
+            return {"status": "ok", "message": "Database connection successful"}, 200
+        except Exception as e:
+            return {"status": "error", "message": str(e)}, 500
+
+    return app
 

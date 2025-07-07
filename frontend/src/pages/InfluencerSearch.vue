@@ -1,6 +1,6 @@
 <template>
   <el-main>
-    <div v-loading="loading" element-loading-text="加载中..." element-loading-spinner="el-icon-loading">
+    <div v-loading="influencerStore.loading" element-loading-text="Loading..." element-loading-spinner="el-icon-loading">
       <div>
         <el-form
           :inline="true"
@@ -8,7 +8,7 @@
           :rules="rules"
           ref="formRef"
           @submit.prevent="onSearch"
-          class="p-4 flex justify-center items-center"
+          class="w-full flex justify-center items-center"
         >
           <el-form-item prop="handle" class="w-1/2">
             <el-input
@@ -29,17 +29,17 @@
       </div>
 
       <el-alert
-        v-if="errorMsg"
-        :title="errorMsg"
+        v-if="influencerStore.errorMsg"
+        :title="influencerStore.errorMsg"
         type="error"
         show-icon
       />
 
-      <div v-if="influencers.length" class="result-card">
+      <div v-if="influencerStore.influencers.length" class="result-card">
         <div class="flex justify-end mb-4">
           <el-button type="primary" @click="copyAll" class="btn">一键复制所有行</el-button>
         </div>
-        <el-table :data="influencers" style="width: 100%" border>
+        <el-table :data="influencerStore.influencers" style="width: 100%" border>
           <el-table-column prop="handle" label="用户名" />
           <el-table-column prop="follower_count" label="粉丝数" />
           <el-table-column prop="video_count" label="视频数" />
@@ -69,10 +69,10 @@
         </el-table>
       </div>
 
-      <div v-if="influencer && influencer.videos && influencer.videos.length" class="videos-section">
+      <div v-if="influencerStore.influencers && influencerStore.influencers.videos && influencerStore.influencers.videos.length" class="videos-section">
         <h3 class="videos-title">最近30条视频列表</h3>
         <div class="videos-card">
-          <el-table :data="influencer.videos" border>
+          <el-table :data="influencerStore.influencers.videos" border>
             <el-table-column label="视频ID" prop="id" />
             <el-table-column label="标题">
               <template #default="scope">
@@ -93,7 +93,7 @@
       </div>
 
       <el-alert
-        v-for="err in errorList"
+        v-for="err in influencerStore.errorList"
         :key="err.handle"
         :title="`${err.handle}: ${err.error}`"
         type="error"
@@ -106,9 +106,11 @@
 
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { useInfluencerStore } from '../store/influencer'
+import { percent, avg, formatTime } from '../utils/utils'
 
+const influencerStore = useInfluencerStore()
 const form = ref({ handle: '' })
 const rules = {
   handle: [
@@ -116,66 +118,13 @@ const rules = {
   ]
 }
 const formRef = ref()
-const influencers = ref([])
-const loading = ref(false)
-const errorMsg = ref('')
-const API_URL = import.meta.env.VITE_API_URL
-const errorList = ref([])
 
 async function onSearch() {
   formRef.value.validate(async (valid) => {
     if (valid) {
-      loading.value = true
-      influencers.value = []
-      errorMsg.value = ''
-      errorList.value = []
-      try {
-        // 处理输入，支持多个 handle
-        const handles = form.value.handle
-          .split(',')
-          .map(h => h.trim())
-          .filter(h => h)
-        if (!handles.length) {
-          errorMsg.value = '请输入至少一个用户名'
-          loading.value = false
-          return
-        }
-        const res = await axios.get(`${API_URL}/api/influencers/search`, {
-          params: { handles: handles.join(',') }
-        })
-        const data = res.data
-        if (data.results) {
-          influencers.value = data.results
-        } else {
-          influencers.value = []
-        }
-        if (data.errors && data.errors.length) {
-          errorList.value = data.errors
-        }
-      } catch (e) {
-        errorMsg.value = '查询失败，请重试'
-        influencers.value = []
-      } finally {
-        loading.value = false
-      }
+      await influencerStore.searchInfluencers({ keyword: form.value.handle })
     }
   })
-}
-
-function percent(a, b) {
-  if (!b || b === 0) return '0%'
-  return ((a / b) * 100).toFixed(2) + '%'
-}
-
-function avg(total, count) {
-  if (!count || count === 0) return '0'
-  return (total / count).toFixed(2)
-}
-
-function formatTime(ts) {
-  if (!ts) return '-'
-  const d = new Date(ts * 1000)
-  return d.toLocaleString()
 }
 
 function copyRow(row) {
@@ -199,12 +148,12 @@ function copyRow(row) {
 }
 
 function copyAll() {
-  if (!influencers.value.length) {
+  if (!influencerStore.influencers.length) {
     ElMessage.warning('没有可复制的数据')
     return
   }
   // 不需要header，直接拼接数据
-  const rows = influencers.value.map(row => [
+  const rows = influencerStore.influencers.map(row => [
     row.handle,
     row.follower_count,
     row.video_count,
