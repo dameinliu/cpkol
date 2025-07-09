@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 const PER_PAGE = import.meta.env.PER_PAGE || 12
 
 export const useInfluencerStore = defineStore('influencer', () => {
