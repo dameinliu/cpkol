@@ -4,13 +4,15 @@ from flask_cors import CORS
 import os
 from .extentions import db, migrate
 
-def create_app():
+def create_app(test_config=None):
+    from dotenv import load_dotenv
+    load_dotenv()
+
     app = Flask(__name__, instance_relative_config=True)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
-        "DATABASE_URL",
-        'postgresql://postgres:123456@localhost:5432/influencers'
-    )
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config.from_object('app.config.Config')
+    if test_config:
+        app.config.from_mapping(test_config)
+
     CORS(app)
     db.init_app(app)
     migrate.init_app(app, db)

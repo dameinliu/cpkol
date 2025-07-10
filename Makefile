@@ -1,4 +1,4 @@
-.PHONY: help backend frontend install-backend install-frontend run-backend run-frontend
+.PHONY: help backend frontend install-backend install-frontend run-backend run-frontend test-kol
 
 help:
 	@echo "用法："
@@ -19,6 +19,9 @@ run-backend:
 	cd backend && FLASK_APP=main.py FLASK_ENV=development flask run --debug
 run-frontend:
 	cd frontend && pnpm dev
+
+test-kol:
+	cd backend && pytest -v ./tests/test_kol.py
 
 backend: install-backend run-backend
 

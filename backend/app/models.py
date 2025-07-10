@@ -5,7 +5,7 @@ import json
 class Influencer(db.Model):
     __tablename__ = 'influencer'
 
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     handle = db.Column(db.String(128), unique=True, nullable=False)
     sec_uid = db.Column(db.String(256), nullable=True)
     follower_count = db.Column(db.Integer, default=0)
@@ -30,7 +30,8 @@ class Influencer(db.Model):
             'total_digg_count': self.total_digg_count,
             'videos': json.loads(self.videos) if self.videos else [],
             'updated_date': self.updated_date.isoformat() if self.updated_date else None,
-            'content_type': self.content_type
+            'content_type': self.content_type,
+            'note': self.note
         }
 
     def __repr__(self):

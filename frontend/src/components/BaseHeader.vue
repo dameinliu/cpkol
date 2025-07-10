@@ -13,10 +13,10 @@
         <el-menu-item index="/InfluencerList" @click="handleSelect('/InfluencerList')">Influencer List</el-menu-item>
         <el-menu-item index="/InfluencerSearch" @click="handleSelect('/InfluencerSearch')">Influencer Search</el-menu-item>
       </el-sub-menu>
-      <el-sub-menu index="2">
+      <!-- <el-sub-menu index="2">
         <template #title>Videos</template>
         <el-menu-item index="/TrendingVideos" @click="handleSelect('/TrendingVideos')">Trending Videos</el-menu-item>
-      </el-sub-menu>
+      </el-sub-menu> -->
       <el-menu-item>
         <ThemeSwitch />
       </el-menu-item>

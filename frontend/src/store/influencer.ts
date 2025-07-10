@@ -1,75 +1,48 @@
-import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
-const PER_PAGE = import.meta.env.PER_PAGE || 12
+const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
+
+export interface Influencer {
+  handle: string,
+  follower_count: number,
+  total_play_count: number,
+  total_comment_count: number,
+  total_digg_count: number,
+  video_count: number,
+  videos: any[],
+  content_type: string[] | string,
+  note: string,
+  updated_date: string,
+  dirty?: boolean
+}
 
 export const useInfluencerStore = defineStore('influencer', () => {
-  const influencers = ref([])
-  const loading = ref(false)
-  const error = ref(null)
-  // const userInfo = ref(null)
-  // const videoStats = ref(null)
-  const total = ref(0)
-  const page = ref(1)
-  const perPage = ref(PER_PAGE)
-  const pages = ref(1)
-
-  async function searchInfluencers({ keyword }) {
-    loading.value = true
-    error.value = null
-
+  async function searchInfluencers(keywords: Array<string>) {
     try {
         const res = await axios.get(`${API_URL}/kol/search`, {
-          params: { keyword }
+          params: { keywords: keywords.join(',') }
         })
-        // 这里根据后端返回结构调整
-        // // "userInfo": {
-        //     "handle": influencer.handle,
-        //     "sec_uid": influencer.sec_uid,
-        //     "followerCount": influencer.follower_count,
-        //     "total_play_count": influencer.total_play_count,
-        //     "total_comment_count": influencer.total_comment_count,
-        //     "total_digg_count": influencer.total_digg_count,
-        //     "video_count": influencer.video_count,
-        //     "videos": []
-        // }
-
-        // 调试成功
-        influencers.value = res.data.results
-        error.value = res.data.errors
-
-        console.log(influencers.value)
-        console.log(error.value)
-        console.log("ha")
+        
+        return res.data
       } catch (e) {
-        this.error = e.message
-      } finally {
-        loading.value = false
+        return e.message
       }
     }
     
-  async function fetchInfluencers({ page: p = 1, perPage: pp = PER_PAGE } = {}) {
-    loading.value = true
-    error.value = null
+  async function fetchInfluencers({ page: p = 1, perPage: pp = 12} = {}) {
     try {
       const res = await axios.get(`${API_URL}/kol/list`, {
         params: { page: p, per_page: pp }
       })
-      influencers.value = res.data.items
-      total.value = res.data.total
-      page.value = res.data.page
-      perPage.value = res.data.per_page
-      pages.value = res.data.pages
+      return res.data
     } catch (e) {
-      error.value = e.message
-    } finally {
-      loading.value = false
+      return e.message
     }
   }
 
+  // 单行更新数据
   async function updateInfluencer(handle, content_type:Array<string>, note:string) {
     try {
       const res = await axios.post(`${API_URL}/kol/update`, {
@@ -87,19 +60,10 @@ export const useInfluencerStore = defineStore('influencer', () => {
       }
     } catch (e) {
       ElMessage.error('Update failed')
-    } finally {
-      loading.value = false
     }
   }
 
   return {
-    influencers,
-    loading,
-    error,
-    total,
-    page,
-    perPage,
-    pages,
     fetchInfluencers,
     searchInfluencers,
     updateInfluencer

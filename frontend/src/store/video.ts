@@ -2,13 +2,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import axios from 'axios'
-const API_URL = import.meta.env.VITE_API_URL
+
+const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
 
 export const useVideoStore = defineStore('video', () => {
   const videos = ref<any[]>([])
   const loading = ref(false)
   const errorMsg = ref('')
-  const API_URL = import.meta.env.VITE_API_URL
 
   async function fetchVideos(country: string) {
     loading.value = true

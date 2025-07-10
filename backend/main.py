@@ -9,8 +9,8 @@ try:
     app = create_app()
 
     if __name__ == '__main__':
-        port = int(os.environ.get("PORT", 5000))
-        app.run(debug=True, host="0.0.0.0", port=port)
+        # python main.py 5000才会走到这里，否则会走__init__.py
+        app.run(debug=True, host="0.0.0.0", port=os.environ.get('PORT', 5000))
 except Exception as e:
     print("Flask app failed to start:", e, file=sys.stderr)
     raise
