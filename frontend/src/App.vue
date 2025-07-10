@@ -1,11 +1,14 @@
 <template>
-  <router-view />
+  <el-container direction="vertical" class="w-full h-full">
+    <BaseHeader />
+    <el-main class="mx-10 ml-10">
+      <router-view />
+    </el-main>
+  </el-container>
 </template>
 
-<script setup>
-// 应用初始化，无需内容
+<script setup lang="ts">
 </script>
 
-<style scoped>
-/* 可留空或添加全局样式 */
+<style scoped lang="scss">
 </style>
