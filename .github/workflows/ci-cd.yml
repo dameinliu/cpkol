@@ -45,6 +45,10 @@ jobs:
       - name: Run backend tests
         env:
           DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          TIKAPI_API_KEY: ${{ secrets.TIKAPI_API_KEY }}
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_REDIRECT_URI: ${{ secrets.FEISHU_REDIRECT_URI }}
         run: |
           cd backend
           pytest
