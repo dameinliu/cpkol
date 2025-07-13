@@ -124,6 +124,18 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Debug image names
+        env:
+          BACKEND_IMAGE: ${{ needs.docker-build-and-push.outputs.backend-image }}
+          FRONTEND_IMAGE: ${{ needs.docker-build-and-push.outputs.frontend-image }}
+        run: |
+          echo "Backend image: $BACKEND_IMAGE"
+          echo "Frontend image: $FRONTEND_IMAGE"
+
+      # - name: Copy files to EC2
+      #   run: |
+      #     scp -i ec2_key.pem -r . $EC2_USER@$EC2_HOST:/home/ec2-user/cp-main
+
       - name: Deploy to EC2 via Docker Compose
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
