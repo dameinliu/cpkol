@@ -136,7 +136,7 @@ jobs:
           cd /home/ec2-user/cp-main
 
           echo "BACKEND_IMAGE=$BACKEND_IMAGE" > .env
-          echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" > .env
+          echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" >> .env
 
           docker-compose pull
           docker-compose up -d
