@@ -141,9 +141,11 @@ jobs:
           ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}<<EOF
             cd /home/ec2-user/cp-main
 
-            echo "BACKEND_IMAGE=${{ needs.docker-build-and-push.outputs.backend-image }}" > .env
-            echo "FRONTEND_IMAGE=${{ needs.docker-build-and-push.outputs.frontend-image }}" >> .env
-
+            BACKEND_IMAGE=${{ needs.docker-build-and-push.outputs.backend-image }} \
+            FRONTEND_IMAGE=${{ needs.docker-build-and-push.outputs.frontend-image }} \
             docker-compose pull
+
+            BACKEND_IMAGE=${{ needs.docker-build-and-push.outputs.backend-image }} \
+            FRONTEND_IMAGE=${{ needs.docker-build-and-push.outputs.frontend-image }} \
             docker-compose up -d
           EOF
