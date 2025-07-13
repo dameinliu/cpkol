@@ -133,7 +133,7 @@ jobs:
           FRONTEND_IMAGE: ${{ needs.docker-build-and-push.outputs.frontend-image }}
         run: |
           ssh -i ec2_key.pem $EC2_USER@$EC2_HOST <<EOF
-          cd /home/cp-main
+          cd /home/ec2-user/cp-main
 
           echo "BACKEND_IMAGE=$BACKEND_IMAGE" >> .env
           echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" >> .env
