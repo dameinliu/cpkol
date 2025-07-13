@@ -137,19 +137,13 @@ jobs:
       #     scp -i ec2_key.pem -r . $EC2_USER@$EC2_HOST:/home/ec2-user/cp-main
 
       - name: Deploy to EC2 via Docker Compose
-        env:
-          EC2_HOST: ${{ secrets.EC2_HOST }}
-          EC2_USER: ${{ secrets.EC2_USER }}
-          EC2_REGION: ${{ secrets.AWS_REGION }}
-          BACKEND_IMAGE: ${{ needs.docker-build-and-push.outputs.backend-image }}
-          FRONTEND_IMAGE: ${{ needs.docker-build-and-push.outputs.frontend-image }}
         run: |
-          ssh -i ec2_key.pem $EC2_USER@$EC2_HOST <<EOF
-          cd /home/ec2-user/cp-main
+          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}<<EOF
+            cd /home/ec2-user/cp-main
 
-          echo "BACKEND_IMAGE=$BACKEND_IMAGE" > .env
-          echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" >> .env
+            echo "BACKEND_IMAGE=${{ needs.docker-build-and-push.outputs.backend-image }}" > .env
+            echo "FRONTEND_IMAGE=${{ needs.docker-build-and-push.outputs.frontend-image }}" >> .env
 
-          docker-compose pull
-          docker-compose up -d
+            docker-compose pull
+            docker-compose up -d
           EOF
