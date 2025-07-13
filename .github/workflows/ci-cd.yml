@@ -64,7 +64,6 @@ jobs:
           cd frontend
           npm run build
   docker-build-and-push:
-    id: docker-build-and-push
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
