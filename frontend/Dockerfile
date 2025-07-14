@@ -17,10 +17,6 @@ RUN pnpm run build
 # 生产阶段
 FROM nginx:alpine AS production
 
-# 创建非root用户
-RUN addgroup -g 1001 -S nginx && \
-    adduser -S nginx -u 1001
-
 # 安装curl用于健康检查
 RUN apk add --no-cache curl
 
