@@ -138,14 +138,28 @@ jobs:
 
       - name: Deploy to EC2 via Docker Compose
         run: |
-          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}<<EOF
+          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} <<EOF
             cd /home/ec2-user/cp-main
 
-            BACKEND_IMAGE=${{ needs.docker-build-and-push.outputs.backend-image }} \
-            FRONTEND_IMAGE=${{ needs.docker-build-and-push.outputs.frontend-image }} \
-            docker-compose pull
+            # 写入 compose 用的 .env
+            touch .env
+            echo "BACKEND_IMAGE=${{ needs.docker-build-and-push.outputs.backend-image }}" > .env
+            echo "FRONTEND_IMAGE=${{ needs.docker-build-and-push.outputs.frontend-image }}" >> .env
 
-            BACKEND_IMAGE=${{ needs.docker-build-and-push.outputs.backend-image }} \
-            FRONTEND_IMAGE=${{ needs.docker-build-and-push.outputs.frontend-image }} \
+            # 写入后端专用 .env
+            touch backend/.env
+            DATABASE_URL=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:ap-southeast-1:631164543688:secret:rds!db-f701b6e4-840b-409f-b025-fb3839cf0be5-QLeO2T --region ${{ secrets.AWS_REGION }} --query SecretString --output text)
+            echo "DATABASE_URL=$DATABASE_URL" >> backend/.env
+            echo "TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}" >> backend/.env
+            echo "FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}" >> backend/.env
+            echo "FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}" >> backend/.env
+            echo "FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}" >> backend/.env
+
+            # 写入前端专用 .env
+            touch frontend/.env
+            echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > frontend/.env
+
+            # 拉取镜像并启动服务  
+            docker-compose pull
             docker-compose up -d
           EOF
