@@ -63,6 +63,7 @@ jobs:
         run: |
           cd frontend
           npm run build
+
   docker-build-and-push:
     needs: build-and-test
     runs-on: ubuntu-latest
@@ -108,6 +109,7 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f frontend/Dockerfile ./frontend
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "frontend-image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
   deploy-to-ec2:
     needs: docker-build-and-push
     runs-on: ubuntu-latest
@@ -132,34 +134,88 @@ jobs:
           echo "Backend image: $BACKEND_IMAGE"
           echo "Frontend image: $FRONTEND_IMAGE"
 
-      # - name: Copy files to EC2
-      #   run: |
-      #     scp -i ec2_key.pem -r . $EC2_USER@$EC2_HOST:/home/ec2-user/cp-main
-
-      - name: Deploy to EC2 via Docker Compose
+      - name: Create deployment script
+        env:
+          BACKEND_IMAGE: ${{ needs.docker-build-and-push.outputs.backend-image }}
+          FRONTEND_IMAGE: ${{ needs.docker-build-and-push.outputs.frontend-image }}
         run: |
-          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} <<EOF
-            cd /home/ec2-user/cp-main
+          cat > deploy.sh << 'EOFSCRIPT'
+          #!/bin/bash
+          set -e
+          
+          # 确保项目目录存在
+          mkdir -p /home/ec2-user/cp-main
+          cd /home/ec2-user/cp-main
 
-            # 写入 compose 用的 .env
-            touch .env
-            echo "BACKEND_IMAGE=${{ needs.docker-build-and-push.outputs.backend-image }}" > .env
-            echo "FRONTEND_IMAGE=${{ needs.docker-build-and-push.outputs.frontend-image }}" >> .env
+          # 配置 AWS 凭证（如果还没配置的话）
+          if [ ! -f ~/.aws/credentials ]; then
+            mkdir -p ~/.aws
+            cat > ~/.aws/credentials << EOL
+[default]
+aws_access_key_id = ${{ secrets.AWS_ACCESS_KEY_ID }}
+aws_secret_access_key = ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+EOL
+            cat > ~/.aws/config << EOL
+[default]
+region = ${{ secrets.AWS_REGION }}
+output = json
+EOL
+          fi
 
-            # 写入后端专用 .env
-            touch backend/.env
-            DATABASE_URL=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:ap-southeast-1:631164543688:secret:rds!db-f701b6e4-840b-409f-b025-fb3839cf0be5-QLeO2T --region ${{ secrets.AWS_REGION }} --query SecretString --output text)
-            echo "DATABASE_URL=$DATABASE_URL" >> backend/.env
-            echo "TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}" >> backend/.env
-            echo "FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}" >> backend/.env
-            echo "FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}" >> backend/.env
-            echo "FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}" >> backend/.env
+          # 写入 compose 用的 .env
+          cat > .env << EOL
+BACKEND_IMAGE=${BACKEND_IMAGE}
+FRONTEND_IMAGE=${FRONTEND_IMAGE}
+EOL
 
-            # 写入前端专用 .env
-            touch frontend/.env
-            echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" > frontend/.env
+          # 写入后端环境变量到 .env
+          DATABASE_URL=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:ap-southeast-1:631164543688:secret:rds!db-f701b6e4-840b-409f-b025-fb3839cf0be5-QLeO2T --region ${{ secrets.AWS_REGION }} --query SecretString --output text)
+          cat > .env << EOL
+DATABASE_URL=$DATABASE_URL
+TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}
+FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}
+FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
+FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}
+EOL
 
-            # 拉取镜像并启动服务  
-            docker-compose pull
-            docker-compose up -d
-          EOF
+          # 写入 docker-compose.yml 文件
+          cat > docker-compose.yml << EOL
+services:
+  backend:
+    image: \${BACKEND_IMAGE}
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    restart: always
+
+  frontend:
+    image: \${FRONTEND_IMAGE}
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=${{ secrets.VITE_API_URL }}
+    restart: always
+EOL
+
+          # 登录到 ECR
+          ECR_REGISTRY=$(echo ${BACKEND_IMAGE} | cut -d'/' -f1)
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+          # 拉取镜像并启动服务  
+          docker-compose pull
+          docker-compose up -d --remove-orphans
+EOFSCRIPT
+
+          # 替换脚本中的环境变量
+          sed -i "s/\${BACKEND_IMAGE}/${BACKEND_IMAGE}/g" deploy.sh
+          sed -i "s/\${FRONTEND_IMAGE}/${FRONTEND_IMAGE}/g" deploy.sh
+          chmod +x deploy.sh
+
+      - name: Copy deployment script to EC2
+        run: |
+          scp -i ec2_key.pem deploy.sh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ec2-user/
+
+      - name: Execute deployment on EC2
+        run: |
+          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "bash /home/ec2-user/deploy.sh"
