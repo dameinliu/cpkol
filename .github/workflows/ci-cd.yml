@@ -316,12 +316,6 @@ jobs:
               container_name: cp-backend
               env_file:
                 - .env
-              environment:
-                # 确保 AWS 凭证传递到容器
-                - AWS_REGION=${AWS_REGION}
-                - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-                - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-                - AWS_DEFAULT_REGION=${AWS_REGION}
               ports:
                 - "5000:5000"
               restart: unless-stopped
