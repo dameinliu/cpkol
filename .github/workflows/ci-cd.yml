@@ -316,6 +316,12 @@ jobs:
               container_name: cp-backend
               env_file:
                 - .env
+              environment:
+                # 确保 AWS 凭证传递到容器
+                - AWS_REGION=${AWS_REGION}
+                - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+                - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                - AWS_DEFAULT_REGION=${AWS_REGION}
               ports:
                 - "5000:5000"
               restart: unless-stopped
@@ -375,15 +381,22 @@ jobs:
           
           # 创建环境文件
           cat > .env << 'EOF'
-          # 数据库配置
+          # AWS配置（IAM认证需要）
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}
+          
+          # 数据库配置 - 优先IAM认证
+          USE_IAM_AUTH=true
           RDS_HOST=${{ secrets.RDS_HOST }}
           RDS_PORT=${{ secrets.RDS_PORT }}
           RDS_DATABASE=${{ secrets.RDS_DATABASE }}
-          RDS_USERNAME=iam_user
-          USE_IAM_AUTH=true
+          RDS_USERNAME=${{ secrets.RDS_USERNAME }}
           
-          # AWS配置
-          AWS_REGION=${{ secrets.AWS_REGION }}
+          # 回退配置
+          RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
           
           # Flask配置
           FLASK_ENV=${{ github.ref == 'refs/heads/production' && 'production' || 'development' }}
