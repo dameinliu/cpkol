@@ -331,10 +331,11 @@ jobs:
                 retries: 3
                 start_period: 40s
               logging:
-                driver: "json-file"
+                driver: "awslogs"
                 options:
-                  max-size: "10m"
-                  max-file: "3"
+                  awslogs-region: "ap-southeast-1"
+                  awslogs-group: "/cp-app/backend"
+                  awslogs-stream-prefix: "cp-backend"
           
             frontend:
               image: ${FRONTEND_IMAGE}
@@ -356,10 +357,11 @@ jobs:
                 timeout: 10s
                 retries: 3
               logging:
-                driver: "json-file"
+                driver: "awslogs"
                 options:
-                  max-size: "10m"
-                  max-file: "3"
+                  awslogs-region: "ap-southeast-1"
+                  awslogs-group: "/cp-app/frontend"
+                  awslogs-stream-prefix: "cp-frontend"
           
           networks:
             cp-network:
