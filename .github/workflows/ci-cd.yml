@@ -258,7 +258,6 @@ jobs:
     
     environment: 
       name: ${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
-      url: ${{ secrets.DEPLOYMENT_URL }}
 
     steps:
       - name: 🔑 Install SSH key
