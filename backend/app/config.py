@@ -29,7 +29,19 @@ def get_database_uri():
         return f"postgresql://{username}:{encoded_token}@{host}:{port}/{database}?sslmode=require"
     
     # 传统方式（从环境变量或 Secrets Manager）
-    return os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI')
+    database_url = os.environ.get('DATABASE_URL') or os.environ.get('SQLALCHEMY_DATABASE_URI')
+    
+    # 本地开发回退
+    if not database_url:
+        # 尝试本地开发数据库
+        local_db = os.environ.get('DATABASE_URL_LOCAL')
+        if local_db:
+            return local_db
+        
+        # 默认本地 PostgreSQL 配置
+        return 'postgresql://postgres:123456@localhost:5432/influencers'
+    
+    return database_url
 
 class Config:
     SQLALCHEMY_DATABASE_URI = get_database_uri()
