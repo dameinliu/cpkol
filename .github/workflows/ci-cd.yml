@@ -62,7 +62,7 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          npm run build
+          pnpm build
 
   docker-build-and-push:
     needs: build-and-test
@@ -75,7 +75,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 登录 AWS ECR（以 AWS 为例，需提前配置好 secrets）
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -83,7 +82,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 登录 ECR 并获取 registry 地址
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -97,7 +95,7 @@ jobs:
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f backend/Dockerfile ./backend --no-cache
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "backend-image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image (frontend)
         id: build-and-push-frontend
@@ -108,7 +106,7 @@ jobs:
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f frontend/Dockerfile ./frontend
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "frontend-image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
   deploy-to-ec2:
     needs: docker-build-and-push
@@ -126,26 +124,13 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Debug image names
-        env:
-          BACKEND_IMAGE: ${{ needs.docker-build-and-push.outputs.backend-image }}
-          FRONTEND_IMAGE: ${{ needs.docker-build-and-push.outputs.frontend-image }}
+      - name: Copy deploy script and env to EC2
         run: |
-          echo "Backend image: $BACKEND_IMAGE"
-          echo "Frontend image: $FRONTEND_IMAGE"
-
-      - name: Create deployment script
-        env:
-          BACKEND_IMAGE: ${{ needs.docker-build-and-push.outputs.backend-image }}
-          FRONTEND_IMAGE: ${{ needs.docker-build-and-push.outputs.frontend-image }}
-        run: |
-          cat > deploy.sh << 'EOFSCRIPT'
+          cat > deploy.sh <<'EOF'
           #!/bin/bash
           set -e
           
-          # 确保项目目录存在
-          mkdir -p /home/ec2-user/cp-main
-          cd /home/ec2-user/cp-main
+          mkdir -p ~/cp-main && cd ~/cp-main
 
           # 配置 AWS 凭证（如果还没配置的话）
           if [ ! -f ~/.aws/credentials ]; then
@@ -162,24 +147,42 @@ output = json
 EOL
           fi
 
-          # 写入 compose 用的 .env
-          cat > .env << EOL
-BACKEND_IMAGE=${BACKEND_IMAGE}
-FRONTEND_IMAGE=${FRONTEND_IMAGE}
-EOL
+          # 安装 jq 如果不存在
+          if ! command -v jq &> /dev/null; then
+              sudo yum install -y jq || sudo apt-get install -y jq
+          fi
 
-          # 写入后端环境变量到 .env
-          DATABASE_URL=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:ap-southeast-1:631164543688:secret:rds!db-f701b6e4-840b-409f-b025-fb3839cf0be5-QLeO2T --region ${{ secrets.AWS_REGION }} --query SecretString --output text)
-          cat > .env << EOL
-DATABASE_URL=$DATABASE_URL
+          # 使用 IAM 数据库认证
+          export DB_HOST=${{ secrets.RDS_HOST }}
+          export DB_PORT=${{ secrets.RDS_PORT }}
+          export DB_NAME=${{ secrets.RDS_DATABASE }}
+          export DB_USER=iam_user
+          
+          # 生成 IAM 认证令牌
+          export DB_TOKEN=$(aws rds generate-db-auth-token \
+            --hostname $DB_HOST \
+            --port $DB_PORT \
+            --username $DB_USER \
+            --region ${{ secrets.AWS_REGION }})
+
+          cat > .env <<EOL
+# IAM 数据库认证配置
+RDS_HOST=$DB_HOST
+RDS_PORT=$DB_PORT
+RDS_DATABASE=$DB_NAME
+RDS_USERNAME=$DB_USER
+USE_IAM_AUTH=true
+AWS_REGION=${{ secrets.AWS_REGION }}
 TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}
 FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}
 FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
 FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}
+VITE_API_URL=${{ secrets.VITE_API_URL }}
+BACKEND_IMAGE=${{ needs.docker-build-and-push.outputs.backend-image }}
+FRONTEND_IMAGE=${{ needs.docker-build-and-push.outputs.frontend-image }}
 EOL
 
-          # 写入 docker-compose.yml 文件
-          cat > docker-compose.yml << EOL
+          cat > docker-compose.yml <<EOL
 services:
   backend:
     image: \${BACKEND_IMAGE}
@@ -193,29 +196,26 @@ services:
     image: \${FRONTEND_IMAGE}
     ports:
       - "80:80"
-    environment:
-      - VITE_API_URL=${{ secrets.VITE_API_URL }}
+    env_file:
+      - .env
     restart: always
 EOL
 
-          # 登录到 ECR
-          ECR_REGISTRY=$(echo ${BACKEND_IMAGE} | cut -d'/' -f1)
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY
+          # 测试数据库连接
+          echo "Testing database connection..."
+          if command -v psql &> /dev/null; then
+            DB_TOKEN_TEST=$(aws rds generate-db-auth-token \
+              --hostname $DB_HOST \
+              --port $DB_PORT \
+              --username $DB_USER \
+              --region ${{ secrets.AWS_REGION }})
+            PGPASSWORD="$DB_TOKEN_TEST" psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT 1;" || echo "Database connection test failed"
+          fi
 
-          # 拉取镜像并启动服务  
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $(echo $BACKEND_IMAGE | cut -d'/' -f1)
           docker-compose pull
           docker-compose up -d --remove-orphans
-EOFSCRIPT
+          EOF
 
-          # 替换脚本中的环境变量
-          sed -i "s/\${BACKEND_IMAGE}/${BACKEND_IMAGE}/g" deploy.sh
-          sed -i "s/\${FRONTEND_IMAGE}/${FRONTEND_IMAGE}/g" deploy.sh
-          chmod +x deploy.sh
-
-      - name: Copy deployment script to EC2
-        run: |
-          scp -i ec2_key.pem deploy.sh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/home/ec2-user/
-
-      - name: Execute deployment on EC2
-        run: |
-          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "bash /home/ec2-user/deploy.sh"
+          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} 'bash -s' < deploy.sh
+          

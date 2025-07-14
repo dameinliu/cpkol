@@ -3,7 +3,6 @@ services:
     image: ${BACKEND_IMAGE} # github actions 会自动替换为实际的镜像地址
     env_file:
       - .env
-      - .env.production
     ports:
       - "5000:5000"
     restart: always
