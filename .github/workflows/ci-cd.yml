@@ -331,9 +331,10 @@ jobs:
           echo "Using Backend Image: ${BACKEND_IMAGE_TAG}"
           echo "Using Frontend Image: ${FRONTEND_IMAGE_TAG}"
           
-          # 2. 使用 envsubst 从模板安全地创建生产覆盖文件
-          # 明确指定要替换的变量，这是最安全的方式
-          envsubst '${BACKEND_IMAGE_TAG},${FRONTEND_IMAGE_TAG}' < docker-compose.tpl.yml > docker-compose.prod.yml
+          # 2. 使用 sed 从模板创建生产覆盖文件，这比 envsubst 更直接、更可靠
+          cp docker-compose.tpl.yml docker-compose.prod.yml
+          sed -i -e "s|\${BACKEND_IMAGE_TAG}|${BACKEND_IMAGE_TAG}|g" docker-compose.prod.yml
+          sed -i -e "s|\${FRONTEND_IMAGE_TAG}|${FRONTEND_IMAGE_TAG}|g" docker-compose.prod.yml
 
           # --- 生成 .env 文件 ---
           # 不再包含镜像变量
