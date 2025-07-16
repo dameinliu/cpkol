@@ -1,36 +1,38 @@
+version: '3.8'
+
+# 顶层 env_file 会将 .env 文件中的变量应用到所有服务
+# 这是共享配置的最佳实践
+env_file:
+  - ./.env
+
 services:
   backend:
-    build:
-      context: ./backend
-    container_name: cp-backend-dev
+    # 基础文件中不指定镜像或构建上下文
+    # 这将由 docker-compose.prod.yml 提供
+    container_name: cp-backend
     ports:
       - "5001:5001"
-    volumes:
-      - ./backend:/app
-    env_file:
-      - ./backend/.env
-    command: ["flask", "run", "--host=0.0.0.0", "--port=5001", "--debug"]
-    restart: "no"
     networks:
-      - cpkol-net
+      - cp-network
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   frontend:
-    build:
-      context: ./frontend
-      target: development
-    container_name: cp-frontend-dev
+    container_name: cp-frontend
     ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    env_file:
-      - ./frontend/.env
+      - "80:80"
+    networks:
+      - cp-network
     depends_on:
       - backend
-    networks:
-      - cpkol-net
 
 networks:
-  cpkol-net:
-    external: true
+  cp-network:
+    driver: bridge

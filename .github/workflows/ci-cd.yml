@@ -382,9 +382,12 @@ jobs:
             
             # 使用生产覆盖文件启动新容器
             echo "Starting new containers..."
+            # --remove-orphans 会移除旧版本中不再需要的服务
             docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
             
             echo "🚀 Deployment script finished."
+            # 等待一小段时间让服务有时间启动
+            sleep 15
             docker-compose ps
           "
 
@@ -420,8 +423,9 @@ jobs:
       - name: 🏥 Health checks
         run: |
           sleep 30
-          curl -f ${{ secrets.VITE_API_URL }}/health || echo "API health check failed"
-          curl -f ${{ secrets.DEPLOYMENT_URL }} || echo "Frontend health check failed"
+          # 注意：这里我们检查的是公共 URL，而不是 localhost
+          curl --fail --show-error --silent ${{ secrets.VITE_API_URL }}/health || (echo "API health check failed!" && exit 1)
+          curl --fail --show-error --silent ${{ secrets.DEPLOYMENT_URL }} || (echo "Frontend health check failed!" && exit 1)
 
       - name: 📝 Record deployment
         run: |
