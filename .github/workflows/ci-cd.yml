@@ -187,7 +187,6 @@ jobs:
       frontend-image: ${{ steps.frontend-meta.outputs.tags }}
       backend-digest: ${{ steps.backend-build.outputs.digest }}
       frontend-digest: ${{ steps.frontend-build.outputs.digest }}
-      ecr-registry: ${{ steps.login-ecr.outputs.registry }}
 
     steps:
       - name: 📥 Checkout code
@@ -371,10 +370,11 @@ jobs:
             set -e
             cd ~/cp-app
             
-            # 使用从上一个 job 安全传递过来的 registry URL 登录 ECR
-            aws ecr get-login-password --region '${{ secrets.AWS_REGION }}' | docker login --username AWS --password-stdin '${{ needs.docker-build.outputs.ecr-registry }}'
+            # 手动构建 ECR registry 地址并登录
+            ECR_REGISTRY=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin \$ECR_REGISTRY
             
-            echo "✅ Successfully logged in to ECR."
+            echo "✅ Successfully logged in to ECR: \$ECR_REGISTRY"
             
             # 使用生产覆盖文件拉取新镜像
             echo "Pulling latest images..."
