@@ -1,15 +1,10 @@
 version: '3.8'
 
-# 顶层 env_file 会将 .env 文件中的变量应用到所有服务
-# 这是共享配置的最佳实践
-env_file:
-  - ./.env
-
 services:
   backend:
-    # 基础文件中不指定镜像或构建上下文
-    # 这将由 docker-compose.prod.yml 提供
     container_name: cp-backend
+    env_file:
+      - ./.env
     ports:
       - "5001:5001"
     networks:
@@ -26,6 +21,8 @@ services:
 
   frontend:
     container_name: cp-frontend
+    env_file:
+      - ./.env
     ports:
       - "80:80"
     networks:
