@@ -265,6 +265,9 @@ jobs:
       name: ${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
 
     steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
       - name: 🔑 Install SSH key
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > ec2_key.pem
@@ -277,202 +280,124 @@ jobs:
 
       - name: 🏗️ Setup deployment directory
         run: |
-          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
-            mkdir -p ~/cp-app/{logs,backups,data}
-            cd ~/cp-app
-          "
+          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ~/cp-app/{logs,data}"
 
-      - name: ⚙️ Install system dependencies
+      - name: ⚙️ Install system dependencies on EC2
         run: |
           ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            set -e
+            # Install Docker if not present
             if ! command -v docker &> /dev/null; then
+              echo 'Docker not found, installing...'
               curl -fsSL https://get.docker.com -o get-docker.sh
               sudo sh get-docker.sh
-              sudo usermod -aG docker \$USER
+              sudo usermod -aG docker \${USER}
+              rm get-docker.sh
+              echo 'Docker installed. You may need to relogin for group changes to take effect.'
+            else
+              echo 'Docker is already installed.'
             fi
-            
+
+            # Install Docker Compose if not present
             if ! command -v docker-compose &> /dev/null; then
+              echo 'Docker Compose not found, installing...'
               sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
               sudo chmod +x /usr/local/bin/docker-compose
+              echo 'Docker Compose installed.'
+            else
+              echo 'Docker Compose is already installed.'
             fi
-            
+
+            # Install AWS CLI if not present
             if ! command -v aws &> /dev/null; then
+              echo 'AWS CLI not found, installing...'
               curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'
               unzip -q awscliv2.zip
               sudo ./aws/install --update
               rm -rf aws awscliv2.zip
+              echo 'AWS CLI installed.'
+            else
+              echo 'AWS CLI is already installed.'
             fi
           "
 
-      - name: 📝 Create configuration files
+      - name: 📝 Create .env file
         run: |
-          # Select the first tag for backend and frontend images and export them for envsubst
-          export BACKEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.backend-image }}" | head -n 1)
-          export FRONTEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.frontend-image }}" | head -n 1)
+          # 只选择第一个、最明确的镜像标签
+          BACKEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.backend-image }}" | head -n 1)
+          FRONTEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.frontend-image }}" | head -n 1)
 
-          echo "DEBUG: Using Backend Image: $BACKEND_IMAGE_TAG"
-          echo "DEBUG: Using Frontend Image: $FRONTEND_IMAGE_TAG"
+          echo "BACKEND_IMAGE=${BACKEND_IMAGE_TAG}" > .env
+          echo "FRONTEND_IMAGE=${FRONTEND_IMAGE_TAG}" >> .env
+          
+          # 追加其他所有secrets
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+          echo "AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}" >> .env
+          
+          echo "USE_IAM_AUTH=false" >> .env
+          echo "RDS_HOST=${{ secrets.RDS_HOST }}" >> .env
+          echo "RDS_PORT=${{ secrets.RDS_PORT }}" >> .env
+          echo "RDS_DATABASE=${{ secrets.RDS_DATABASE }}" >> .env
+          echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
+          
+          echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          
+          echo "FLASK_ENV=${{ github.ref == 'refs/heads/production' && 'production' || 'development' }}" >> .env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          
+          echo "TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}" >> .env
+          echo "FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}" >> .env
+          echo "FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}" >> .env
+          echo "FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}" >> .env
+          
+          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" >> .env
+          echo "VITE_APP_TITLE=CP KOL Platform" >> .env
+          echo "VITE_APP_VERSION=${{ github.sha }}" >> .env
+          echo "VITE_ENVIRONMENT=${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}" >> .env
+          
+          echo "COMPOSE_PROJECT_NAME=cp-app" >> .env
 
-          # Create docker-compose.yml from a template file using envsubst for robust substitution
-          cat > docker-compose.tpl.yml << 'EOF'
-          services:
-            backend:
-              image: ${BACKEND_IMAGE_TAG}
-              container_name: cp-backend
-              env_file:
-                - .env
-              ports:
-                - "5000:5000"
-              restart: unless-stopped
-              networks:
-                - cp-network
-              volumes:
-                - ./logs:/app/logs
-                - ./data:/app/data
-              healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
-                start_period: 40s
-              logging:
-                driver: "awslogs"
-                options:
-                  awslogs-region: "ap-southeast-1"
-                  awslogs-group: "/cp-app/backend"
-                  awslogs-stream-prefix: "cp-backend"
-          
-            frontend:
-              image: ${FRONTEND_IMAGE_TAG}
-              container_name: cp-frontend
-              env_file:
-                - .env
-              ports:
-                - "80:80"
-                - "443:443"
-              restart: unless-stopped
-              networks:
-                - cp-network
-              depends_on:
-                backend:
-                  condition: service_healthy
-              healthcheck:
-                test: ["CMD", "curl", "-f", "http://localhost/health"]
-                interval: 30s
-                timeout: 10s
-                retries: 3
-              logging:
-                driver: "awslogs"
-                options:
-                  awslogs-region: "ap-southeast-1"
-                  awslogs-group: "/cp-app/frontend"
-                  awslogs-stream-prefix: "cp-frontend"
-          
-          networks:
-            cp-network:
-              driver: bridge
-              name: cp-network
-          
-          volumes:
-            cp-logs:
-              driver: local
-            cp-data:
-              driver: local
-EOF
-
-          envsubst '${BACKEND_IMAGE_TAG},${FRONTEND_IMAGE_TAG}' < docker-compose.tpl.yml > docker-compose.yml
-          
-          # 创建环境文件
-          cat > .env << 'EOF'
-          # AWS配置（IAM认证需要）
-          AWS_REGION=${{ secrets.AWS_REGION }}
-          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}
-          
-          # 数据库配置 - 优先IAM认证
-          USE_IAM_AUTH=true
-          RDS_HOST=${{ secrets.RDS_HOST }}
-          RDS_PORT=${{ secrets.RDS_PORT }}
-          RDS_DATABASE=${{ secrets.RDS_DATABASE }}
-          RDS_USERNAME=${{ secrets.RDS_USERNAME }}
-          
-          # 回退配置
-          RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          
-          # Flask配置
-          FLASK_ENV=${{ github.ref == 'refs/heads/production' && 'production' || 'development' }}
-          SECRET_KEY=${{ secrets.SECRET_KEY }}
-          
-          # 第三方API配置
-          TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}
-          FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}
-          FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
-          FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}
-          
-          # 前端配置
-          VITE_API_URL=${{ secrets.VITE_API_URL }}
-          VITE_APP_TITLE=CP KOL Platform
-          VITE_APP_VERSION=${{ github.sha }}
-          VITE_ENVIRONMENT=${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
-          
-          # 镜像配置
-          COMPOSE_PROJECT_NAME=cp-app
-          EOF
-          
-          # 上传配置文件到服务器
-          scp -i ec2_key.pem docker-compose.yml ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/cp-app/
-          scp -i ec2_key.pem .env ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/cp-app/
+      - name: 📤 Upload configuration files
+        run: |
+          scp -i ec2_key.pem .env docker-compose.yml docker-compose.prod.yml ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/cp-app/
 
       - name: 🔐 Deploy application
         run: |
           ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            set -e
             cd ~/cp-app
             
-            # 设置AWS凭证
             export AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
             export AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
             export AWS_DEFAULT_REGION='${{ secrets.AWS_REGION }}'
             
-            # 备份当前部署
-            if [ -f docker-compose.yml.current ]; then
-              cp docker-compose.yml.current docker-compose.yml.backup-\$(date +%Y%m%d-%H%M%S)
-            fi
-            cp docker-compose.yml docker-compose.yml.current
+            # 登录ECR, 使用backend镜像地址来获取registry URL
+            ECR_REGISTRY=\$(echo '${{ needs.docker-build.outputs.backend-image }}' | cut -d'/' -f1)
+            aws ecr get-login-password --region '${{ secrets.AWS_REGION }}' | docker login --username AWS --password-stdin \$ECR_REGISTRY
             
-            # 登录ECR
-            aws ecr get-login-password --region '${{ secrets.AWS_REGION }}' | docker login --username AWS --password-stdin \$(echo '${{ needs.docker-build.outputs.backend-image }}' | cut -d'/' -f1)
+            # 使用生产覆盖文件拉取新镜像
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml pull
             
-            # 拉取新镜像
-            docker-compose pull
+            # 使用生产覆盖文件启动新容器
+            # --remove-orphans会移除旧版本中不再需要的服务容器
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
             
-            # 优雅停止旧容器
-            docker-compose down --timeout 30
-            
-            # 启动新容器
-            docker-compose up -d --remove-orphans
-            
-            # 等待服务启动
-            echo 'Waiting for services to be healthy...'
-            for i in {1..30}; do
-              if docker-compose ps | grep -q 'healthy'; then
-                echo 'Services are healthy!'
-                break
-              fi
-              sleep 10
-            done
-            
-            # 显示部署状态
+            echo 'Deployment script finished.'
             docker-compose ps
           "
 
-      - name: 🧹 Cleanup
+      - name: 🧹 Cleanup on runner
+        run: rm -f ec2_key.pem .env
+
+      - name: 🧹 Cleanup on server
         run: |
           ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+            # 清理未被使用的旧镜像和悬空卷
             docker image prune -a -f --filter 'until=24h'
             docker volume prune -f
-            docker network prune -f
           "
 
       - name: ✅ Deployment success
