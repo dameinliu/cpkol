@@ -179,6 +179,8 @@ jobs:
   docker-build:
     name: 🐳 Docker Build & Push
     needs: [code-quality, backend-test, frontend-test]
+    # 只有在特定分支上才运行
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/production'
     runs-on: ubuntu-latest
     
     outputs:
@@ -187,6 +189,8 @@ jobs:
       backend-digest: ${{ steps.backend-build.outputs.digest }}
       frontend-digest: ${{ steps.frontend-build.outputs.digest }}
       ecr-registry: ${{ steps.login-ecr.outputs.registry }}
+      # 我们需要一个统一的、在后续步骤中易于使用的标签
+      image_tag: ${{ steps.backend-meta.outputs.version }}
 
     steps:
       - name: 📥 Checkout code
@@ -210,7 +214,6 @@ jobs:
           images: ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
@@ -221,7 +224,6 @@ jobs:
           images: ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
@@ -258,6 +260,7 @@ jobs:
   deploy:
     name: 🚀 Deploy to ${{ github.ref == 'refs/heads/production' && 'Production' || 'Staging' }}
     needs: docker-build
+    # 无需重复检查分支，因为 'needs: docker-build' 会自动处理跳过逻辑
     runs-on: ubuntu-latest
     
     environment: 
@@ -267,144 +270,62 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔑 Install SSH key
+      - name: 📝 Generate .env file for deployment
         run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" | base64 -d > ec2_key.pem
-          chmod 600 ec2_key.pem
-
-      - name: 📡 Add EC2 host to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-
-      - name: 🏗️ Setup deployment directory
-        run: |
-          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "mkdir -p ~/cp-app/{logs,data}"
-
-      - name: ⚙️ Install system dependencies on EC2
-        run: |
-          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
-            set -e
-            # Install Docker if not present
-            if ! command -v docker &> /dev/null; then
-              echo 'Docker not found, installing...'
-              curl -fsSL https://get.docker.com -o get-docker.sh
-              sudo sh get-docker.sh
-              sudo usermod -aG docker \${USER}
-              rm get-docker.sh
-              echo 'Docker installed. You may need to relogin for group changes to take effect.'
-            else
-              echo 'Docker is already installed.'
-            fi
-
-            # Install Docker Compose if not present
-            if ! command -v docker-compose &> /dev/null; then
-              echo 'Docker Compose not found, installing...'
-              sudo curl -L \"https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)\" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-              echo 'Docker Compose installed.'
-            else
-              echo 'Docker Compose is already installed.'
-            fi
-
-            # Install AWS CLI if not present
-            if ! command -v aws &> /dev/null; then
-              echo 'AWS CLI not found, installing...'
-              curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'
-              unzip -q awscliv2.zip
-              sudo ./aws/install --update
-              rm -rf aws awscliv2.zip
-              echo 'AWS CLI installed.'
-            else
-              echo 'AWS CLI is already installed.'
-            fi
-          "
-
-      - name: 📝 Create configuration files
-        run: |
-          # --- 使用摘要（Digest）来构建精确的镜像引用，这是最可靠的方式 ---
-          export BACKEND_IMAGE_TAG="${{ needs.docker-build.outputs.ecr-registry }}/${{ env.BACKEND_IMAGE_NAME }}@${{ needs.docker-build.outputs.backend-digest }}"
-          export FRONTEND_IMAGE_TAG="${{ needs.docker-build.outputs.ecr-registry }}/${{ env.FRONTEND_IMAGE_NAME }}@${{ needs.docker-build.outputs.frontend-digest }}"
-
-          echo "Using Backend Image: ${BACKEND_IMAGE_TAG}"
-          echo "Using Frontend Image: ${FRONTEND_IMAGE_TAG}"
+          echo "IMAGE_TAG=${{ needs.docker-build.outputs.image_tag }}" > .env
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}" >> .env
+          echo "FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}" >> .env
+          echo "FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}" >> .env
+          echo "FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}" >> .env
+          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" >> .env
           
-          # 2. 使用 sed 从模板创建生产覆盖文件
-          cp docker-compose.tpl.yml docker-compose.prod.yml
-          # 使用 | 作为 sed 的分隔符，以避免镜像名称中的 / 字符造成冲突
-          sed -i -e "s|image: \${BACKEND_IMAGE_TAG}|image: ${BACKEND_IMAGE_TAG}|g" docker-compose.prod.yml
-          sed -i -e "s|image: \${FRONTEND_IMAGE_TAG}|image: ${FRONTEND_IMAGE_TAG}|g" docker-compose.prod.yml
+          echo "--- Generated .env file ---"
+          cat .env
+          echo "---------------------------"
 
-          echo "--- Generated docker-compose.prod.yml ---"
-          cat docker-compose.prod.yml
-          echo "-------------------------------------------"
+      - name: 📤 Upload configurations to EC2
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: ".env,docker-compose.yml,docker-compose.prod.yml"
+          target: "~/cp-app"
+          strip_components: 0
 
-          # --- 生成 .env 文件 ---
-          cat > .env << 'EOF'
-          AWS_REGION=${{ secrets.AWS_REGION }}
-          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}
-          
-          USE_IAM_AUTH=false
-          RDS_HOST=${{ secrets.RDS_HOST }}
-          RDS_PORT=${{ secrets.RDS_PORT }}
-          RDS_DATABASE=${{ secrets.RDS_DATABASE }}
-          RDS_USERNAME=${{ secrets.RDS_USERNAME }}
-          
-          RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
-          
-          FLASK_ENV=${{ github.ref == 'refs/heads/production' && 'production' || 'development' }}
-          SECRET_KEY=${{ secrets.SECRET_KEY }}
-          
-          TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}
-          FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}
-          FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
-          FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}
-          
-          VITE_API_URL=${{ secrets.VITE_API_URL }}
-          VITE_APP_TITLE=CP KOL Platform
-          VITE_APP_VERSION=${{ github.sha }}
-          VITE_ENVIRONMENT=${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
-          
-          COMPOSE_PROJECT_NAME=cp-app
-          EOF
-
-      - name: 📤 Upload configuration files
-        run: |
-          scp -i ec2_key.pem .env docker-compose.yml docker-compose.prod.yml ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:~/cp-app/
-
-      - name: 🔐 Deploy application
-        run: |
-          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+      - name: 🚀 Deploy application on EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
             set -e
             cd ~/cp-app
             
-            echo "Pulling latest images using EC2 IAM Role..."
-            # 由于 EC2 已配置 IAM 角色，Docker 会自动向 ECR 进行身份验证
+            echo "Pulling latest images..."
             docker-compose -f docker-compose.yml -f docker-compose.prod.yml pull
             
             echo "Starting new containers..."
-            # --remove-orphans 会移除旧版本中不再需要的服务
             docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
             
             echo "🚀 Deployment script finished."
-            # 等待一小段时间让服务有时间启动
             sleep 15
             docker-compose ps
-          "
-
-      - name: 🧹 Cleanup on runner
-        run: rm -f ec2_key.pem .env
 
       - name: 🧹 Cleanup on server
-        run: |
-          ssh -i ec2_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
             # 清理未被使用的旧镜像和悬空卷
             docker image prune -a -f --filter 'until=24h'
             docker volume prune -f
-          "
 
       - name: ✅ Deployment success
         run: |
