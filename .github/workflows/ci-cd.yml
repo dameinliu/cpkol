@@ -321,44 +321,51 @@ jobs:
             fi
           "
 
-      - name: 📝 Create .env file
+      - name: 📝 Create configuration files
         run: |
-          # 只选择第一个、最明确的镜像标签
-          BACKEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.backend-image }}" | head -n 1)
-          FRONTEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.frontend-image }}" | head -n 1)
+          # --- 生成 docker-compose.prod.yml ---
+          # 1. 只选择第一个、最明确的镜像标签
+          export BACKEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.backend-image }}" | head -n 1)
+          export FRONTEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.frontend-image }}" | head -n 1)
+          
+          echo "Using Backend Image: ${BACKEND_IMAGE_TAG}"
+          echo "Using Frontend Image: ${FRONTEND_IMAGE_TAG}"
+          
+          # 2. 使用 envsubst 从模板安全地创建生产覆盖文件
+          envsubst < docker-compose.tpl.yml > docker-compose.prod.yml
 
-          echo "BACKEND_IMAGE=${BACKEND_IMAGE_TAG}" > .env
-          echo "FRONTEND_IMAGE=${FRONTEND_IMAGE_TAG}" >> .env
+          # --- 生成 .env 文件 ---
+          # 不再包含镜像变量
+          cat > .env << 'EOF'
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}
           
-          # 追加其他所有secrets
-          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
-          echo "AWS_DEFAULT_REGION=${{ secrets.AWS_REGION }}" >> .env
+          USE_IAM_AUTH=false
+          RDS_HOST=${{ secrets.RDS_HOST }}
+          RDS_PORT=${{ secrets.RDS_PORT }}
+          RDS_DATABASE=${{ secrets.RDS_DATABASE }}
+          RDS_USERNAME=${{ secrets.RDS_USERNAME }}
           
-          echo "USE_IAM_AUTH=false" >> .env
-          echo "RDS_HOST=${{ secrets.RDS_HOST }}" >> .env
-          echo "RDS_PORT=${{ secrets.RDS_PORT }}" >> .env
-          echo "RDS_DATABASE=${{ secrets.RDS_DATABASE }}" >> .env
-          echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
+          RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
           
-          echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          FLASK_ENV=${{ github.ref == 'refs/heads/production' && 'production' || 'development' }}
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
           
-          echo "FLASK_ENV=${{ github.ref == 'refs/heads/production' && 'production' || 'development' }}" >> .env
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}
+          FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}
+          FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}
+          FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}
           
-          echo "TIKAPI_API_KEY=${{ secrets.TIKAPI_API_KEY }}" >> .env
-          echo "FEISHU_APP_ID=${{ secrets.FEISHU_APP_ID }}" >> .env
-          echo "FEISHU_APP_SECRET=${{ secrets.FEISHU_APP_SECRET }}" >> .env
-          echo "FEISHU_REDIRECT_URI=${{ secrets.FEISHU_REDIRECT_URI }}" >> .env
+          VITE_API_URL=${{ secrets.VITE_API_URL }}
+          VITE_APP_TITLE=CP KOL Platform
+          VITE_APP_VERSION=${{ github.sha }}
+          VITE_ENVIRONMENT=${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
           
-          echo "VITE_API_URL=${{ secrets.VITE_API_URL }}" >> .env
-          echo "VITE_APP_TITLE=CP KOL Platform" >> .env
-          echo "VITE_APP_VERSION=${{ github.sha }}" >> .env
-          echo "VITE_ENVIRONMENT=${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}" >> .env
-          
-          echo "COMPOSE_PROJECT_NAME=cp-app" >> .env
+          COMPOSE_PROJECT_NAME=cp-app
+          EOF
 
       - name: 📤 Upload configuration files
         run: |
