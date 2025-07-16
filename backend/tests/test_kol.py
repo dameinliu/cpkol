@@ -52,7 +52,6 @@ def test_search_influencers_no_keywords(client):
     assert 'error' in data
     # 验证返回的是实际的错误信息
     assert 'handle parameter cannot be empty' in data['error']
-
 def test_search_influencers_empty_keywords(client):
     """
     测试：提供的 keywords 参数为空字符串或只包含无效字符。
@@ -61,3 +60,4 @@ def test_search_influencers_empty_keywords(client):
     
     # 验证服务器返回了 400 Bad Request
     assert response.status_code == 400
+

@@ -187,6 +187,7 @@ jobs:
       frontend-image: ${{ steps.frontend-meta.outputs.tags }}
       backend-digest: ${{ steps.backend-build.outputs.digest }}
       frontend-digest: ${{ steps.frontend-build.outputs.digest }}
+      ecr-registry: ${{ steps.login-ecr.outputs.registry }}
 
     steps:
       - name: 📥 Checkout code
@@ -370,22 +371,20 @@ jobs:
             set -e
             cd ~/cp-app
             
-            export AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
-            export AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
-            export AWS_DEFAULT_REGION='${{ secrets.AWS_REGION }}'
+            # 使用从上一个 job 安全传递过来的 registry URL 登录 ECR
+            aws ecr get-login-password --region '${{ secrets.AWS_REGION }}' | docker login --username AWS --password-stdin '${{ needs.docker-build.outputs.ecr-registry }}'
             
-            # 登录ECR, 使用backend镜像地址来获取registry URL
-            ECR_REGISTRY=\$(echo '${{ needs.docker-build.outputs.backend-image }}' | cut -d'/' -f1)
-            aws ecr get-login-password --region '${{ secrets.AWS_REGION }}' | docker login --username AWS --password-stdin \$ECR_REGISTRY
+            echo "✅ Successfully logged in to ECR."
             
             # 使用生产覆盖文件拉取新镜像
+            echo "Pulling latest images..."
             docker-compose -f docker-compose.yml -f docker-compose.prod.yml pull
             
             # 使用生产覆盖文件启动新容器
-            # --remove-orphans会移除旧版本中不再需要的服务容器
+            echo "Starting new containers..."
             docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
             
-            echo 'Deployment script finished.'
+            echo "🚀 Deployment script finished."
             docker-compose ps
           "
 
