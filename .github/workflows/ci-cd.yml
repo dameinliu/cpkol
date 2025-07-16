@@ -381,16 +381,10 @@ jobs:
             set -e
             cd ~/cp-app
             
-            # 手动构建 ECR registry 地址并登录
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ needs.docker-build.outputs.ecr-registry }}
-            
-            echo "✅ Successfully logged in to ECR: ${{ needs.docker-build.outputs.ecr-registry }}"
-            
-            # 使用生产覆盖文件拉取新镜像
-            echo "Pulling latest images..."
+            echo "Pulling latest images using EC2 IAM Role..."
+            # 由于 EC2 已配置 IAM 角色，Docker 会自动向 ECR 进行身份验证
             docker-compose -f docker-compose.yml -f docker-compose.prod.yml pull
             
-            # 使用生产覆盖文件启动新容器
             echo "Starting new containers..."
             # --remove-orphans 会移除旧版本中不再需要的服务
             docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
