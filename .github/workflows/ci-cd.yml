@@ -180,7 +180,6 @@ jobs:
     name: 🐳 Docker Build & Push
     needs: [code-quality, backend-test, frontend-test]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production' || github.event_name == 'workflow_dispatch'
     
     outputs:
       backend-image: ${{ steps.backend-meta.outputs.tags }}
@@ -260,7 +259,6 @@ jobs:
     name: 🚀 Deploy to ${{ github.ref == 'refs/heads/production' && 'Production' || 'Staging' }}
     needs: docker-build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production' || github.event_name == 'workflow_dispatch'
     
     environment: 
       name: ${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
