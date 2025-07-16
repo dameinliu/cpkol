@@ -1,35 +1,57 @@
-# 构建阶段
+# --- Stage 1: Development ---
+# This stage is for local development with hot-reloading.
+FROM node:20-alpine AS development
+
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package management files
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose Vite's development server port
+EXPOSE 5173
+
+# Default command to start the development server
+CMD ["pnpm", "run", "dev"]
+
+
+# --- Stage 2: Build ---
+# This stage is for building the production assets.
 FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# 复制package文件
 COPY package.json pnpm-lock.yaml ./
 
-# 安装pnpm和依赖
 RUN npm install -g pnpm && \
     pnpm install --frozen-lockfile
 
-# 复制源码并构建
 COPY . .
 RUN pnpm run build
 
-# 生产阶段
+
+# --- Stage 3: Production ---
+# This is the final production image with Nginx.
 FROM nginx:alpine AS production
 
-# 安装curl用于健康检查
+# Install curl for health checks
 RUN apk add --no-cache curl
 
-# 复制构建产物
+# Copy build artifacts from the build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# 复制Nginx配置
+# Copy Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 移除默认配置
-RUN rm /etc/nginx/conf.d/default.conf.bak 2>/dev/null || true
-
-# 设置正确的权限
+# Set correct permissions
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
@@ -37,15 +59,12 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
     touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid
 
-# 健康检查
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD curl -f http://localhost/health || exit 1
 
-# 暴露端口
 EXPOSE 80
 
-# 切换到非root用户
 USER nginx
 
-# 启动Nginx
 CMD ["nginx", "-g", "daemon off;"]

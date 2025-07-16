@@ -34,7 +34,16 @@ export default defineConfig({
     UnoCSS(),
   ],
   server: {
-
+    host: '0.0.0.0', // 允许从外部访问
+    port: 5173,
+    proxy: {
+      // 将所有 /api 的请求代理到后端容器
+      '/api': {
+        target: 'http://cp-backend-dev:5001', // 指向后端服务的容器名
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''), // 去掉 /api 前缀
+      },
+    },
   },
   css: {
     preprocessorOptions: {

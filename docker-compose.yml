@@ -1,16 +1,36 @@
 services:
   backend:
-    image: ${BACKEND_IMAGE} # github actions 会自动替换为实际的镜像地址
-    env_file:
-      - .env
+    build:
+      context: ./backend
+    container_name: cp-backend-dev
     ports:
-      - "5000:5000"
-    restart: always
+      - "5001:5001"
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env
+    command: ["flask", "run", "--host=0.0.0.0", "--port=5001", "--debug"]
+    restart: "no"
+    networks:
+      - cpkol-net
 
   frontend:
-    image: ${FRONTEND_IMAGE} # github actions 会自动替换为实际的镜像地址
+    build:
+      context: ./frontend
+      target: development
+    container_name: cp-frontend-dev
     ports:
-      - "80:80"
-    environment:
-      - VITE_API_URL=http://localhost:5000
-    restart: always
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    networks:
+      - cpkol-net
+
+networks:
+  cpkol-net:
+    external: true

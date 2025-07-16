@@ -1,17 +1,16 @@
 # app模块初始化
 from flask import Flask
 from flask_cors import CORS
+from .config import config
 import os
 from .extentions import db, migrate
 
-def create_app(test_config=None):
+def create_app(config_name='default'):
     from dotenv import load_dotenv
     load_dotenv()
 
     app = Flask(__name__, instance_relative_config=True)
-    app.config.from_object('app.config.Config')
-    if test_config:
-        app.config.from_mapping(test_config)
+    app.config.from_object(config[config_name])
 
     CORS(app)
     db.init_app(app)

@@ -6,7 +6,7 @@ import os
 import sys
 
 try:
-    app = create_app()
+    app = create_app(config_name='default')
 
     if __name__ == '__main__':
         # python main.py 5000才会走到这里，否则会走__init__.py

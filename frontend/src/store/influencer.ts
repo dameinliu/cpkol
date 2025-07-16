@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { ref } from 'vue'
 
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5001'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001'
 
 export interface Influencer {
   handle: string,
@@ -19,6 +20,8 @@ export interface Influencer {
 }
 
 export const useInfluencerStore = defineStore('influencer', () => {
+  const influencers = ref<Influencer[]>([])
+
   async function searchInfluencers(keywords: Array<string>) {
     try {
         const res = await axios.get(`${API_URL}/kol/search`, {
@@ -36,6 +39,9 @@ export const useInfluencerStore = defineStore('influencer', () => {
       const res = await axios.get(`${API_URL}/kol/list`, {
         params: { page: p, per_page: pp }
       })
+      if (res.data && Array.isArray(res.data.items)) {
+        influencers.value = res.data.items
+      }
       return res.data
     } catch (e) {
       return e.message
@@ -64,6 +70,7 @@ export const useInfluencerStore = defineStore('influencer', () => {
   }
 
   return {
+    influencers,
     fetchInfluencers,
     searchInfluencers,
     updateInfluencer

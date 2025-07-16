@@ -1,0 +1,8 @@
+services:
+  backend:
+    image: ${BACKEND_IMAGE} # 由 CI/CD 注入
+    restart: always
+
+  frontend:
+    image: ${FRONTEND_IMAGE} # 由 CI/CD 注入
+    restart: always

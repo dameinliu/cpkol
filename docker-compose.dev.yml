@@ -1,9 +1,0 @@
-services:
-  backend:
-    build: ./backend
-    env_file:
-      - ./backend/.env
-    ports:
-      - "5001:5000"
-    volumes:
-      - ./backend:/app  # 挂载源码，支持热更新

@@ -1,48 +1,51 @@
-FROM python:3.11-slim as base
+# --- Stage 1: Builder Base ---
+# This stage installs system dependencies needed to build some Python packages.
+FROM python:3.11-slim as builder-base
 
-# 设置环境变量
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+# Install essential build tools
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# 创建非root用户
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# --- Stage 2: Builder ---
+# This stage installs the Python dependencies into a virtual environment.
+FROM builder-base as builder
 
-# 安装系统依赖
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpq-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Set up a virtual environment in a standard location
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-WORKDIR /app
-
-# 复制并安装Python依赖
-COPY requirements.txt ./
+# Copy and install Python requirements
+# This is done in a separate layer to leverage Docker's cache.
+# The layer will only be rebuilt if requirements.txt changes.
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制应用代码
+# --- Stage 3: Final Image ---
+# This is the final, lightweight production image.
+FROM python:3.11-slim as final
+
+# Create a non-root user to run the application for better security
+RUN useradd --create-home --shell /bin/bash appuser
+WORKDIR /home/appuser
+
+# Copy the virtual environment with dependencies from the builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Copy the application source code
 COPY . .
 
-# 创建日志和数据目录
-RUN mkdir -p logs data && \
-    chown -R appuser:appuser /app
+# Activate the virtual environment and set owner for the application files
+ENV PATH="/opt/venv/bin:$PATH"
+RUN chown -R appuser:appuser ./
 
-# 切换到非root用户
+# Switch to the non-root user
 USER appuser
 
-# 设置环境变量
-ENV FLASK_APP=main.py \
-    FLASK_RUN_HOST=0.0.0.0 \
-    FLASK_RUN_PORT=5000
+# Expose the port the app runs on
+EXPOSE 5001
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:5000/health || exit 1
-
-# 暴露端口
-EXPOSE 5000
-
-# 启动命令
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "--keep-alive", "2", "--max-requests", "1000", "--max-requests-jitter", "100", "main:app"]
+# Define the command to run the application using Gunicorn
+# Gunicorn is a production-ready WSGI server.
+CMD ["gunicorn", "--bind", "0.0.0.0:5001", "main:app"]

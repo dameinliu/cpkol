@@ -67,7 +67,7 @@ jobs:
   backend-test:
     name: 🧪 Backend Tests
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -306,13 +306,18 @@ jobs:
 
       - name: 📝 Create configuration files
         run: |
-          # 创建所有配置文件
-          cat > docker-compose.yml << 'EOF'
-          version: '3.8'
-          
+          # Select the first tag for backend and frontend images and export them for envsubst
+          export BACKEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.backend-image }}" | head -n 1)
+          export FRONTEND_IMAGE_TAG=$(echo "${{ needs.docker-build.outputs.frontend-image }}" | head -n 1)
+
+          echo "DEBUG: Using Backend Image: $BACKEND_IMAGE_TAG"
+          echo "DEBUG: Using Frontend Image: $FRONTEND_IMAGE_TAG"
+
+          # Create docker-compose.yml from a template file using envsubst for robust substitution
+          cat > docker-compose.tpl.yml << 'EOF'
           services:
             backend:
-              image: ${BACKEND_IMAGE}
+              image: ${BACKEND_IMAGE_TAG}
               container_name: cp-backend
               env_file:
                 - .env
@@ -338,7 +343,7 @@ jobs:
                   awslogs-stream-prefix: "cp-backend"
           
             frontend:
-              image: ${FRONTEND_IMAGE}
+              image: ${FRONTEND_IMAGE_TAG}
               container_name: cp-frontend
               env_file:
                 - .env
@@ -373,7 +378,9 @@ jobs:
               driver: local
             cp-data:
               driver: local
-          EOF
+EOF
+
+          envsubst '${BACKEND_IMAGE_TAG},${FRONTEND_IMAGE_TAG}' < docker-compose.tpl.yml > docker-compose.yml
           
           # 创建环境文件
           cat > .env << 'EOF'
@@ -411,8 +418,6 @@ jobs:
           VITE_ENVIRONMENT=${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
           
           # 镜像配置
-          BACKEND_IMAGE=${{ needs.docker-build.outputs.backend-image }}
-          FRONTEND_IMAGE=${{ needs.docker-build.outputs.frontend-image }}
           COMPOSE_PROJECT_NAME=cp-app
           EOF
           
@@ -486,7 +491,7 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production'
-    
+
     steps:
       - name: 🏥 Health checks
         run: |
